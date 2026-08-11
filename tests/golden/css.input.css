@@ -1,0 +1,4 @@
+@charset "UTF-8";
+/* keep  exact */
+:root{--brand:oklch(60% 0.2 250);color-scheme:dark}
+@media (width >= 48rem){.card,.panel{color:red;background:linear-gradient(90deg,red,blue);@apply px-2 py-1;}.empty{}}

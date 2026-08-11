@@ -1,0 +1,10 @@
+{
+  "lineWidth": 120,
+  "indent": {
+    "type": "spaces",
+    "size": 4
+  },
+  "ignore": [
+    "generated/"
+  ]
+}

@@ -1,0 +1,71 @@
+{
+    "name": "themis",
+    "displayName": "Themis",
+    "description": "Format JavaScript, TypeScript, Svelte, CSS, and JSON with Themis.",
+    "version": "0.1.0",
+    "publisher": "ikarii-warrior",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ikariiwarrior/themis.git"
+    },
+    "engines": {
+        "vscode": "^1.90.0"
+    },
+    "categories": [
+        "Formatters"
+    ],
+    "keywords": [
+        "formatter",
+        "javascript",
+        "typescript",
+        "svelte",
+        "css",
+        "json"
+    ],
+    "main": "./dist/extension.cjs",
+    "activationEvents": [
+        "onLanguage:javascript",
+        "onLanguage:javascriptreact",
+        "onLanguage:typescript",
+        "onLanguage:typescriptreact",
+        "onLanguage:svelte",
+        "onLanguage:css",
+        "onLanguage:tailwindcss",
+        "onLanguage:json"
+    ],
+    "contributes": {
+        "configuration": {
+            "title": "Themis",
+            "properties": {
+                "themis.useLocalVersion": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Use the project's @ikarii_warrior/themis dependency when available in a trusted workspace; otherwise use the version bundled with this extension."
+                },
+                "themis.configPath": {
+                    "type": "string",
+                    "default": "",
+                    "scope": "resource",
+                    "description": "Optional path to a Themis configuration file, relative to the workspace folder. Empty uses automatic themis.json discovery."
+                }
+            }
+        }
+    },
+    "scripts": {
+        "build": "node esbuild.mjs",
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run",
+        "check": "npm run typecheck && npm run build && npm test",
+        "package": "npm run check && vsce package --out dist/themis-vscode-0.1.0.vsix"
+    },
+    "devDependencies": {
+        "@ikarii_warrior/themis": "file:../..",
+        "@types/node": "^22.15.0",
+        "@types/vscode": "^1.90.0",
+        "@vscode/vsce": "^3.6.2",
+        "esbuild": "^0.25.0",
+        "typescript": "^5.8.0",
+        "vitest": "^3.2.0"
+    }
+}

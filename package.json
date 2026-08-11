@@ -1,0 +1,78 @@
+{
+    "name": "@ikarii_warrior/themis",
+    "version": "0.1.0",
+    "private": false,
+    "publishConfig": {
+        "access": "public"
+    },
+    "type": "module",
+    "description": "Themis: a syntax-aware, intent-preserving, opinionated code formatter",
+    "license": "MIT",
+    "author": "ikarii_warrior",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ikariiwarrior/themis.git"
+    },
+    "homepage": "https://github.com/ikariiwarrior/themis#readme",
+    "bugs": {
+        "url": "https://github.com/ikariiwarrior/themis/issues"
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "default": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "ARCHITECTURE.md",
+        "LICENSE",
+        "themis.example.json"
+    ],
+    "bin": {
+        "themis": "dist/cli.js",
+        "opinion-format": "dist/cli.js"
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "prepare": "npm run build",
+        "format": "tsx src/cli.ts",
+        "corpus:check": "node scripts/corpus-check.mjs",
+        "vscode:install": "npm install --prefix editors/vscode",
+        "vscode:build": "npm run build --prefix editors/vscode",
+        "vscode:test": "npm test --prefix editors/vscode",
+        "vscode:package": "npm run package --prefix editors/vscode",
+        "test": "vitest run",
+        "check": "npm run build && npm test",
+        "prepublishOnly": "npm run check"
+    },
+    "keywords": [
+        "formatter",
+        "typescript",
+        "javascript",
+        "svelte",
+        "css",
+        "json"
+    ],
+    "dependencies": {
+        "@babel/parser": "^7.28.0",
+        "fast-glob": "^3.3.3",
+        "ignore": "^7.0.6",
+        "jsonc-parser": "^3.3.1",
+        "postcss": "^8.5.26",
+        "svelte": "^5.56.8"
+    },
+    "devDependencies": {
+        "@types/node": "^22.15.0",
+        "tsx": "^4.20.0",
+        "typescript": "^5.8.0",
+        "vitest": "^3.2.0"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

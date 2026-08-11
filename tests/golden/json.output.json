@@ -1,0 +1,13 @@
+{
+    "name": "example",
+    "values": [ 1, 2, 3 ],
+    "intentional": [
+        true,
+        false
+    ],
+    "nested": {
+        "unicode": "\u0061",
+        "number": 1e3
+    },
+    "empty": {}
+}

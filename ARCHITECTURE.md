@@ -74,6 +74,8 @@ The formatter performs four stages:
 
 Existing multiline constructs are never collapsed. `lineWidth` is consulted only for expansion. This makes the output deterministic and idempotent while preserving authored grouping and unsupported syntax.
 
+Escape directives are parser-aware rather than textual pre-processing. The JavaScript engine resolves a single ignore to the outermost node at the next source position and restores original trivia for gaps within that protected range after every layout rule has run. Bounded regions restore every contained token gap. The CSS engine marks protected PostCSS nodes and excludes them from structural mutation. Svelte receives the same behavior through script/style delegation. The whole document is still parsed, so directives cannot hide invalid syntax.
+
 The Svelte engine parses the complete component, obtains exact embedded-region ranges from the official AST, formats recognized JavaScript/TypeScript scripts and ordinary CSS styles, and applies replacements from the end of the document backward. It never searches for script or style tags with regular expressions. Markup and attributes—including Tailwind class order—remain byte-for-byte unchanged apart from global newline normalization and the final newline. Explicit non-CSS style languages are left untouched when the Svelte parser can represent them.
 
 The CSS engine changes container layout and declaration colon spacing through PostCSS `raws`. Selectors, values, custom properties, comments, unknown at-rules, and `@apply` parameters are retained. Invalid CSS fails preflight and is never delegated to another formatter.
@@ -89,6 +91,8 @@ The suite has three complementary layers:
 - every formatted output is formatted a second time to establish idempotence.
 
 Focused tests cover comments/literals, optional chaining, TypeScript syntax, grouping parentheses, direct-argument objects, return spacing, and soft-width expansion.
+
+Escape-directive tests cover next-node preservation, bounded regions, malformed markers, CSS nodes, embedded Svelte regions, and second-pass idempotence.
 
 Project integration tests additionally cover configuration discovery and validation, ignore precedence, directory discovery, check/list/write modes, exit codes, atomic writes, and all-or-nothing parse preflight.
 

@@ -183,4 +183,42 @@ describe("JavaScript/TypeScript formatter", () => {
       ");\n",
     );
   });
+
+  it("preserves the syntax node following themis-ignore", () => {
+    const input = [
+      "const before=ready;",
+      "// themis-ignore",
+      "function legacy ( x,y ){return{x :1,y:  2};}",
+      "const after=done;",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript" });
+
+    expect(output).toContain("// themis-ignore\nfunction legacy ( x,y ){return{x :1,y:  2};}");
+    expect(output).toContain("const before = ready;");
+    expect(output).toContain("const after = done;");
+    expect(format(output, { language: "typescript" })).toBe(output);
+  });
+
+  it("preserves bounded themis-ignore regions exactly", () => {
+    const protectedSource = "const old={left :1,right:  2};\nif(old){run (  old.left,old.right );}";
+    const input = [
+      "const before=ready;",
+      "// themis-ignore-start",
+      protectedSource,
+      "// themis-ignore-end",
+      "const after=done;",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript" });
+
+    expect(output).toContain(`// themis-ignore-start\n${protectedSource}\n// themis-ignore-end`);
+    expect(format(output, { language: "typescript" })).toBe(output);
+  });
+
+  it("rejects malformed ignore directives", () => {
+    expect(() => format("// themis-ignore\n", { language: "typescript" })).toThrow("must be followed");
+    expect(() => format("// themis-ignore-start\nconst x=1;\n", { language: "typescript" })).toThrow("no matching");
+    expect(() => format("// themis-ignore-end\nconst x=1;\n", { language: "typescript" })).toThrow("no matching");
+  });
 });

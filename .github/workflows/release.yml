@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            editors/vscode/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix editors/vscode
+      - run: npm run release:verify
+      - run: npm run check
+      - run: npm run vscode:package
+      - name: Pack npm artifact
+        run: |
+          mkdir release
+          npm pack --pack-destination release
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release/*.tgz editors/vscode/dist/*.vsix --verify-tag --generate-notes

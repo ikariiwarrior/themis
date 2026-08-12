@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  formatter:
+    name: Formatter / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+
+  vscode:
+    name: VS Code extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            editors/vscode/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix editors/vscode
+      - run: npm run release:verify
+      - run: npm run vscode:package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: themis-vscode
+          path: editors/vscode/dist/*.vsix
+          if-no-files-found: error
+

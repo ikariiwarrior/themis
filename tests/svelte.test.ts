@@ -52,4 +52,27 @@ describe("Svelte formatter", () => {
     const unsupported = "<style lang=\"scss\">.x{color:red}</style>\n";
     expect(format(unsupported, { language: "svelte" })).toBe(unsupported);
   });
+
+  it("honors ignore directives in embedded scripts and styles", () => {
+    const input = [
+      "<script lang=\"ts\">",
+      "// themis-ignore",
+      "const legacy={left :1,right:  2};",
+      "const formatted=legacy.left+legacy.right;",
+      "</script>",
+      "<style>",
+      "/* themis-ignore */",
+      ".legacy { color :red;padding:  0 }",
+      ".formatted{color:blue}",
+      "</style>",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "svelte" });
+
+    expect(output).toContain("const legacy={left :1,right:  2};");
+    expect(output).toContain("const formatted = legacy.left + legacy.right;");
+    expect(output).toContain(".legacy { color :red;padding:  0 }");
+    expect(output).toContain(".formatted {");
+    expect(format(output, { language: "svelte" })).toBe(output);
+  });
 });

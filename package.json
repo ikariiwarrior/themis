@@ -1,6 +1,6 @@
 {
     "name": "@ikarii_warrior/themis",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "private": false,
     "publishConfig": {
         "access": "public"
@@ -30,6 +30,7 @@
         "dist",
         "README.md",
         "ARCHITECTURE.md",
+        "CHANGELOG.md",
         "LICENSE",
         "assets",
         "themis.example.json"
@@ -47,6 +48,7 @@
         "vscode:build": "npm run build --prefix editors/vscode",
         "vscode:test": "npm test --prefix editors/vscode",
         "vscode:package": "npm run package --prefix editors/vscode",
+        "release:verify": "node scripts/verify-release-version.mjs",
         "test": "vitest run",
         "check": "npm run build && npm test",
         "prepublishOnly": "npm run check"

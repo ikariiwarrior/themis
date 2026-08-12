@@ -1,4 +1,5 @@
 import type { FormatterEngine, FormatOptions, LanguageId } from "../core/types.js";
+import { rangeContainsGap, themisDirective, type SourceRange } from "../core/directives.js";
 import { parseJavaScript } from "./parser.js";
 
 type Node = {
@@ -78,6 +79,47 @@ function findToken(tokens: Token[], start: number, end: number, text: string, so
   return undefined;
 }
 
+function protectedRanges(ast: Node, tokens: Token[], source: string): SourceRange[] {
+  const nodes: SourceRange[] = [];
+  walk(ast, undefined, (node) => {
+    if (node.type !== "File" && node.type !== "Program" && node.start != null && node.end != null) {
+      nodes.push({ start: node.start, end: node.end });
+    }
+  });
+
+  const ranges: SourceRange[] = [];
+  let regionStart: number | undefined;
+  for (const token of tokens) {
+    if (!isComment(token)) continue;
+    const directive = themisDirective(source.slice(token.start, token.end));
+    if (!directive) continue;
+
+    if (directive === "ignore-start") {
+      if (regionStart !== undefined) throw new Error("Nested themis-ignore-start directives are not allowed.");
+      regionStart = token.end;
+      continue;
+    }
+
+    if (directive === "ignore-end") {
+      if (regionStart === undefined) throw new Error("themis-ignore-end has no matching themis-ignore-start.");
+      ranges.push({ start: regionStart, end: token.start });
+      regionStart = undefined;
+      continue;
+    }
+
+    const candidates = nodes.filter((node) => node.start >= token.end);
+    if (candidates.length === 0) throw new Error("themis-ignore must be followed by a syntax node.");
+    const firstStart = Math.min(...candidates.map((node) => node.start));
+    const first = candidates
+      .filter((node) => node.start === firstStart)
+      .sort((left, right) => right.end - left.end)[0];
+    ranges.push({ start: token.end, end: first.end });
+  }
+
+  if (regionStart !== undefined) throw new Error("themis-ignore-start has no matching themis-ignore-end.");
+  return ranges;
+}
+
 export class JavaScriptFormatter implements FormatterEngine {
   readonly languages: readonly LanguageId[] = ["javascript", "typescript", "jsx", "tsx"];
 
@@ -88,6 +130,8 @@ export class JavaScriptFormatter implements FormatterEngine {
     if (tokens.length === 0) return normalized.endsWith("\n") ? normalized : `${normalized}\n`;
 
     const gaps = tokens.slice(1).map((token, index) => normalized.slice(tokens[index].end, token.start));
+    const originalGaps = [...gaps];
+    const ignoredRanges = protectedRanges(ast, tokens, normalized);
     const forcedBreak = new Map<number, number>();
     const forcedBlank = new Map<number, number>();
     const multilineObjects = new Set<number>();
@@ -446,6 +490,12 @@ export class JavaScriptFormatter implements FormatterEngine {
       if (tokenIndex <= 0) continue;
       const indentDepth = Math.max(0, braceDepth[tokenIndex] + extra);
       gaps[tokenIndex - 1] = `\n\n${options.indent.repeat(indentDepth)}`;
+    }
+
+    for (let index = 0; index < gaps.length; index++) {
+      const gapStart = tokens[index].end;
+      const gapEnd = tokens[index + 1].start;
+      if (ignoredRanges.some((range) => rangeContainsGap(range, gapStart, gapEnd))) gaps[index] = originalGaps[index];
     }
 
     let result = normalized.slice(0, tokens[0].start) + normalized.slice(tokens[0].start, tokens[0].end);

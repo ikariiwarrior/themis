@@ -130,6 +130,33 @@ const output = format(source, {
 });
 ```
 
+## Formatter escape directives
+
+Use `themis-ignore` when a valid syntax node must retain its authored whitespace. The directive preserves the next statement, declaration, member, property, or other parser node while the rest of the file is formatted normally:
+
+```ts
+// themis-ignore
+const generated={left :1,right:  2};
+```
+
+Use a bounded pair for multiple nodes:
+
+```ts
+// themis-ignore-start
+const first={left :1};
+const second =  {right:2};
+// themis-ignore-end
+```
+
+CSS uses the equivalent block comments:
+
+```css
+/* themis-ignore */
+.legacy { color :red;padding:  0 }
+```
+
+The directives work inside supported Svelte `<script>` and `<style>` regions through their delegated engines. Directive text must occupy the whole comment. Nested, unmatched, or targetless directives fail formatting without changing the file. The complete file must remain syntactically valid because Themis always parses before formatting. Final-newline normalization still applies.
+
 ## Visual Studio Code
 
 The first-party extension registers Themis as a native formatter for JavaScript, TypeScript, JSX, TSX, Svelte, CSS (including the Tailwind CSS language mode), and JSON. It bundles the formatter, so format-on-save does not require a global or project installation. In a trusted workspace it prefers a project-local `@ikarii_warrior/themis` dependency when available, keeping editor, CLI, hooks, and CI on the same pinned version.
@@ -139,7 +166,7 @@ Build and install the development VSIX:
 ```sh
 npm run vscode:install
 npm run vscode:package
-code --install-extension editors/vscode/dist/themis-vscode-0.1.1.vsix
+code --install-extension editors/vscode/dist/themis-vscode-0.2.0.vsix
 ```
 
 Then add this to `.vscode/settings.json`:

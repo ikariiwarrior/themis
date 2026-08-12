@@ -39,4 +39,30 @@ describe("CSS formatter", () => {
   it("rejects invalid CSS instead of delegating to another formatter", () => {
     expect(() => format("a { color: ;", { language: "css" })).toThrow();
   });
+
+  it("preserves ignored CSS nodes and bounded regions", () => {
+    const input = [
+      ".formatted{color:red}",
+      "/* themis-ignore */",
+      ".legacy { color :red;padding:  0 }",
+      "/* themis-ignore-start */",
+      ".old{margin :0}",
+      ".older {padding:0;color : blue}",
+      "/* themis-ignore-end */",
+      ".after{display:block}",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "css" });
+
+    expect(output).toContain(".legacy { color :red;padding:  0 }");
+    expect(output).toContain(".old{margin :0}\n.older {padding:0;color : blue}");
+    expect(output).toContain(".formatted {");
+    expect(output).toContain(".after {");
+    expect(format(output, { language: "css" })).toBe(output);
+  });
+
+  it("rejects malformed CSS ignore directives", () => {
+    expect(() => format("/* themis-ignore */\n", { language: "css" })).toThrow("must be followed");
+    expect(() => format("/* themis-ignore-start */\na{x:1}\n", { language: "css" })).toThrow("no matching");
+  });
 });

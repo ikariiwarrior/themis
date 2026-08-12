@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 - Unreleased
+## 0.2.0 - 2026-08-12
 
 - Add Themis branding and Marketplace presentation metadata.
 - Add support for formatter escape directives in supported comment-bearing languages.

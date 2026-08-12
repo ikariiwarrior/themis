@@ -2,7 +2,7 @@
 
 All notable changes to Themis are recorded here.
 
-## 0.2.0 - Unreleased
+## 0.2.0 - 2026-08-12
 
 - Add `themis-ignore`, `themis-ignore-start`, and `themis-ignore-end` escape directives for JavaScript, TypeScript, CSS, and embedded Svelte scripts/styles.
 - Add the first-party branded VS Code formatter with bundled and project-local engine resolution.

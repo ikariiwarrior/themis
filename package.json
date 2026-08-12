@@ -49,8 +49,9 @@
         "vscode:test": "npm test --prefix editors/vscode",
         "vscode:package": "npm run package --prefix editors/vscode",
         "release:verify": "node scripts/verify-release-version.mjs",
+        "release:test": "node --test scripts/verify-release-version.test.mjs",
         "test": "vitest run",
-        "check": "npm run build && npm test",
+        "check": "npm run build && npm test && npm run release:test",
         "prepublishOnly": "npm run check"
     },
     "keywords": [

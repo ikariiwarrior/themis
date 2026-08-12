@@ -2,7 +2,8 @@ import { readFile } from "node:fs/promises";
 
 const root = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 const extension = JSON.parse(await readFile(new URL("../editors/vscode/package.json", import.meta.url), "utf8"));
-const tag = process.env.GITHUB_REF_NAME ?? process.argv[2];
+const reference = process.argv[2] ?? process.env.GITHUB_REF_NAME;
+const tag = reference?.startsWith("v") ? reference : undefined;
 
 if (root.version !== extension.version) {
   throw new Error(`Release versions differ: npm ${root.version}, VS Code ${extension.version}.`);

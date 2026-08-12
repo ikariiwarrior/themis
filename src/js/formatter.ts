@@ -478,7 +478,10 @@ export class JavaScriptFormatter implements FormatterEngine {
       const text = normalized.slice(tokens[index].start, tokens[index].end);
       if (text === "}") braces = Math.max(0, braces - 1);
       braceDepth[index] = braces;
-      if (text === "{") braces++;
+      // Babel tokenizes a template interpolation as `${` ... `}`. Treat its
+      // opening token as a brace so the closing `}` cannot accidentally reduce
+      // the surrounding block's indentation depth.
+      if (text === "{" || text === "${") braces++;
     }
 
     for (const [tokenIndex, extra] of forcedBreak) {

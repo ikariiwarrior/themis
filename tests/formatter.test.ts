@@ -184,6 +184,33 @@ describe("JavaScript/TypeScript formatter", () => {
     );
   });
 
+  it("keeps callback body indentation after a preserved multiline call", () => {
+    const input = [
+      "export const template=query(z.object({productId:z.number().int()}),async(payload):Promise<Models.TemplateModel|null>=>{",
+      "  const result=await Base.custom<Models.TemplateModel>(",
+      "        `customize/template/${payload.productId}` ,",
+      "        Http.Method.POST,",
+      "        payload,",
+      "        Api.ApiTypeFlags.Public",
+      "    );",
+      "console.log(result);",
+      "console.log(payload.productId);",
+      "if(!result.success||!result.data){",
+      "  console.error(`failed: ${payload.productId}`);",
+      "}",
+      "return (null);",
+      "});",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript" });
+
+    expect(output).toContain("\n    console.log( result );\n    console.log( payload.productId );\n    if( !result.success || !result.data ) {");
+    expect(output).toContain("\n        console.error( `failed: ${payload.productId}` );\n    }");
+    expect(output).toContain("\n\n    return ( null );\n} );");
+    expect(format(output, { language: "typescript" })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
   it("preserves the syntax node following themis-ignore", () => {
     const input = [
       "const before=ready;",

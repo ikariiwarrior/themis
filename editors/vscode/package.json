@@ -1,5 +1,5 @@
 {
-    "name": "themis",
+    "name": "themis-formatter",
     "displayName": "Themis",
     "description": "Format JavaScript, TypeScript, Svelte, CSS, and JSON with Themis.",
     "version": "0.2.0",

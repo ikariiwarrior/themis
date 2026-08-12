@@ -16,7 +16,7 @@ Add this to `.vscode/settings.json`:
 {
     "editor.formatOnSave": true,
     "[javascript][javascriptreact][typescript][typescriptreact][svelte][css][tailwindcss][json]": {
-        "editor.defaultFormatter": "ikarii.themis"
+        "editor.defaultFormatter": "ikarii.themis-formatter"
     }
 }
 ```

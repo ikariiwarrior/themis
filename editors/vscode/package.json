@@ -3,7 +3,7 @@
     "displayName": "Themis",
     "description": "Format JavaScript, TypeScript, Svelte, CSS, and JSON with Themis.",
     "version": "0.2.0",
-    "publisher": "ikarii-warrior",
+    "publisher": "ikarii",
     "license": "SEE LICENSE IN LICENSE",
     "pricing": "Free",
     "preview": true,

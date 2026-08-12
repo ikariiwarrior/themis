@@ -146,6 +146,32 @@ export class JavaScriptFormatter implements FormatterEngine {
     const directArgumentObjects = new Set<Node>();
     const compactArgumentObjectTrees = new Set<Node>();
     const compactArgumentObjectRanges: Array<{ open: number; close: number }> = [];
+    const jsxElementRanges: SourceRange[] = [];
+    const multilineParenthesizedRanges: SourceRange[] = [];
+    const jsxDelimiterTokens = new Set<number>();
+    const tokenOverrides = new Map<number, string>();
+    const arrayRanges: Array<{ open: number; close: number; elements: Node[] }> = [];
+
+    const tokenText = (index: number): string => normalized.slice(tokens[index].start, tokens[index].end);
+    const tokenIs = (index: number, text: string): boolean => label(tokens[index], normalized) === text;
+    const breakWasAuthoredBefore = (index: number): boolean => index > 0 && containsLineBreak(originalGaps[index - 1] ?? "");
+
+    const formatMultilineDelimitedList = (
+      open: number,
+      close: number,
+      items: Node[],
+      expand: boolean,
+    ): void => {
+      if (!expand || close <= open + 1) return;
+      const firstItem = items[0]?.start != null ? locate(tokens, items[0].start) : undefined;
+      forcedBreak.set(firstItem ?? open + 1, 1);
+      for (const item of items.slice(1)) {
+        if (item.start == null) continue;
+        const itemToken = locate(tokens, item.start);
+        if (itemToken !== undefined) forcedBreak.set(itemToken, 1);
+      }
+      forcedBreak.set(close, 0);
+    };
 
     const forceMultilineObject = (open: number, close: number): void => {
       multilineObjects.add(open);
@@ -153,10 +179,9 @@ export class JavaScriptFormatter implements FormatterEngine {
       forcedBreak.set(close, 0);
       let nestedDepth = 0;
       for (let index = open + 1; index < close; index++) {
-        const tokenText = normalized.slice(tokens[index].start, tokens[index].end);
-        if (["(", "[", "{"].includes(tokenText)) nestedDepth++;
-        if ([")", "]", "}"].includes(tokenText)) nestedDepth--;
-        if (tokenText === "," && nestedDepth === 0) forcedBreak.set(index + 1, 0);
+        if (["(", "[", "{"].some((text) => tokenIs(index, text))) nestedDepth++;
+        if ([")", "]", "}"].some((text) => tokenIs(index, text))) nestedDepth--;
+        if (tokenIs(index, ",") && nestedDepth === 0) forcedBreak.set(index + 1, 0);
       }
     };
 
@@ -200,6 +225,7 @@ export class JavaScriptFormatter implements FormatterEngine {
           if (tokenIndex !== undefined) {
             spacedBefore.add(tokenIndex);
             spacedAfter.add(tokenIndex);
+            if (node.type === "ConditionalExpression" && breakWasAuthoredBefore(tokenIndex)) forcedBreak.set(tokenIndex, 1);
           }
         }
       }
@@ -279,13 +305,129 @@ export class JavaScriptFormatter implements FormatterEngine {
         if (open !== undefined && close !== undefined && close > open) genericAngles.push({ open, close });
       }
 
+      if ((node.type === "JSXExpressionContainer" || node.type === "JSXSpreadAttribute" || node.type === "JSXSpreadChild") && node.start != null && node.end != null) {
+        const open = locate(tokens, node.start);
+        const close = locate(tokens, node.end, true);
+        if (open !== undefined && close !== undefined && close > open + 1) {
+          compactAfter.add(open);
+          compactBefore.add(close);
+        }
+      }
+
+      if (node.type === "JSXAttribute" && node.start != null && node.end != null) {
+        const equals = findToken(tokens, node.start, node.end, "=", normalized);
+        if (equals !== undefined) {
+          compactBefore.add(equals);
+          compactAfter.add(equals);
+        }
+      }
+
+      if (node.type === "JSXOpeningElement" && node.start != null && node.end != null) {
+        const attributes = Array.isArray(node.attributes) ? node.attributes as Node[] : [];
+        const open = locate(tokens, node.start);
+        const close = locate(tokens, node.end, true);
+        const name = node.name as Node | undefined;
+        if (open !== undefined) {
+          jsxDelimiterTokens.add(open);
+          compactAfter.add(open);
+        }
+        if (close !== undefined) {
+          jsxDelimiterTokens.add(close);
+          compactBefore.add(close);
+        }
+        if (close !== undefined && name?.end != null && attributes.length > 0) {
+          const firstAttribute = locate(tokens, attributes[0].start ?? -1);
+          const authoredMultiline = containsLineBreak(normalized.slice(node.start, node.end));
+          const expand = authoredMultiline || normalized.slice(node.start, node.end).length > options.lineWidth;
+          if (firstAttribute !== undefined) {
+            if (expand) {
+              const baseContinuation =
+                multilineParenthesizedRanges.filter((range) => range.start < node.start! && node.start! < range.end).length +
+                jsxElementRanges.filter((range) => range.start < node.start! && node.start! < range.end).length;
+              for (const attribute of attributes) {
+                if (attribute.start == null) continue;
+                const attributeToken = locate(tokens, attribute.start);
+                if (attributeToken !== undefined) forcedBreak.set(attributeToken, baseContinuation + 1);
+              }
+              const closingToken = tokenText(close - 1) === "/" ? close - 1 : close;
+              forcedBreak.set(closingToken, baseContinuation);
+            } else {
+              spacedBefore.add(firstAttribute);
+            }
+          }
+          if (tokenText(close - 1) === "/") {
+            jsxDelimiterTokens.add(close - 1);
+            spacedBefore.add(close - 1);
+            compactAfter.add(close - 1);
+          }
+        }
+      }
+
+      if (node.type === "JSXClosingElement" && node.start != null && node.end != null) {
+        const open = locate(tokens, node.start);
+        const close = locate(tokens, node.end, true);
+        if (open !== undefined) {
+          jsxDelimiterTokens.add(open);
+          compactBefore.add(open);
+          compactAfter.add(open);
+          if (tokenText(open + 1) === "/") {
+            jsxDelimiterTokens.add(open + 1);
+            compactAfter.add(open + 1);
+          }
+        }
+        if (close !== undefined) {
+          jsxDelimiterTokens.add(close);
+          compactBefore.add(close);
+        }
+      }
+
+      if ((node.type === "JSXOpeningFragment" || node.type === "JSXClosingFragment") && node.start != null && node.end != null) {
+        const open = locate(tokens, node.start);
+        const close = locate(tokens, node.end, true);
+        const slash = findToken(tokens, node.start, node.end, "/", normalized);
+        if (open !== undefined) {
+          jsxDelimiterTokens.add(open);
+          compactBefore.add(open);
+          compactAfter.add(open);
+        }
+        if (close !== undefined) {
+          jsxDelimiterTokens.add(close);
+          compactBefore.add(close);
+        }
+        if (slash !== undefined) {
+          jsxDelimiterTokens.add(slash);
+          compactBefore.add(slash);
+          compactAfter.add(slash);
+        }
+      }
+
+      if ((node.type === "JSXElement" || node.type === "JSXFragment") && node.start != null && node.end != null) {
+        jsxElementRanges.push({ start: node.start, end: node.end });
+      }
+
+      if (node.type === "ParenthesizedExpression" && node.start != null && node.end != null && containsLineBreak(normalized.slice(node.start, node.end))) {
+        const expression = node.expression as Node | undefined;
+        const open = locate(tokens, node.start);
+        const close = locate(tokens, node.end, true);
+        if (expression?.start != null && open !== undefined && close !== undefined) {
+          const expressionToken = locate(tokens, expression.start);
+          if (expressionToken !== undefined && breakWasAuthoredBefore(expressionToken)) {
+            multilineParenthesizedRanges.push({ start: node.start, end: node.end });
+            forcedBreak.set(expressionToken, 1);
+          }
+          if (breakWasAuthoredBefore(close)) forcedBreak.set(close, 0);
+        }
+      }
+
       if (node.start != null && node.end != null && (
         node.type === "CallExpression" || node.type === "NewExpression" ||
         node.type === "FunctionDeclaration" || node.type === "FunctionExpression" ||
         node.type === "ObjectMethod" || node.type === "ClassMethod" || node.type === "ClassPrivateMethod" || node.type === "TSDeclareMethod" ||
         CONTROL_TYPES.has(node.type)
       )) {
-        const open = findToken(tokens, node.start, node.end, "(", normalized);
+        const callee = node.callee as Node | undefined;
+        const searchStart = (node.type === "CallExpression" || node.type === "NewExpression") && callee?.end != null ? callee.end : node.start;
+        const open = findToken(tokens, searchStart, node.end, "(", normalized);
         if (open !== undefined) attachedParens.add(open);
       }
 
@@ -348,20 +490,48 @@ export class JavaScriptFormatter implements FormatterEngine {
 
       if ((node.type === "CallExpression" || node.type === "NewExpression") && node.start != null && node.end != null) {
         const text = normalized.slice(node.start, node.end);
-        if (!containsLineBreak(text) && text.length > options.lineWidth) {
-          const open = findToken(tokens, node.start, node.end, "(", normalized);
-          const close = findToken(tokens, node.start, node.end, ")", normalized, true);
+        const authoredMultiline = containsLineBreak(text);
+        if (authoredMultiline || text.length > options.lineWidth) {
+          const callee = node.callee as Node | undefined;
+          const open = findToken(tokens, callee?.end ?? node.start, node.end, "(", normalized);
+          const close = locate(tokens, node.end, true);
           if (open !== undefined && close !== undefined && close > open + 1) {
-            multilineCalls.add(open);
-            forcedBreak.set(open + 1, 1);
-            forcedBreak.set(close, 0);
-            let depth = 0;
-            for (let index = open + 1; index < close; index++) {
-              const text = normalized.slice(tokens[index].start, tokens[index].end);
-              if (["(", "[", "{"].includes(text)) depth++;
-              if ([")", "]", "}"].includes(text)) depth--;
-              if (text === "," && depth === 0) forcedBreak.set(index + 1, 1);
-            }
+            const args = Array.isArray(node.arguments) ? node.arguments as Node[] : [];
+            const expand = !authoredMultiline || breakWasAuthoredBefore(open + 1) || args.some((argument) => {
+              if (argument.start == null) return false;
+              const argumentToken = locate(tokens, argument.start);
+              return argumentToken !== undefined && breakWasAuthoredBefore(argumentToken);
+            }) || breakWasAuthoredBefore(close);
+            if (expand) multilineCalls.add(open);
+            formatMultilineDelimitedList(open, close, args, expand);
+          }
+        }
+      }
+
+      if (node.type === "ArrayExpression" && node.start != null && node.end != null) {
+        const open = locate(tokens, node.start);
+        const close = locate(tokens, node.end, true);
+        const elements = Array.isArray(node.elements) ? (node.elements as Array<Node | null>).filter((item): item is Node => item !== null) : [];
+        if (open !== undefined && close !== undefined && containsLineBreak(normalized.slice(node.start, node.end))) {
+          formatMultilineDelimitedList(open, close, elements, true);
+        }
+        if (open !== undefined && close !== undefined) arrayRanges.push({ open, close, elements });
+      }
+
+      if (node.type === "ConditionalExpression") {
+        for (const branch of [node.consequent, node.alternate] as Array<Node | undefined>) {
+          if (branch?.start == null) continue;
+          const branchToken = locate(tokens, branch.start);
+          if (branchToken !== undefined && breakWasAuthoredBefore(branchToken)) forcedBreak.set(branchToken, 1);
+        }
+      }
+
+      if ((node.type === "MemberExpression" || node.type === "OptionalMemberExpression") && node.property && typeof node.property === "object") {
+        const property = node.property as Node;
+        if (property.start != null) {
+          const propertyToken = locate(tokens, property.start);
+          if (propertyToken !== undefined && propertyToken > 0 && breakWasAuthoredBefore(propertyToken - 1)) {
+            forcedBreak.set(propertyToken - 1, 1);
           }
         }
       }
@@ -395,26 +565,31 @@ export class JavaScriptFormatter implements FormatterEngine {
       if (containsForcedBreak) forceMultilineObject(open, close);
     }
 
+    // Expansion discovered inside an array must pressure its containing array
+    // during this pass. Process inner arrays first so nested lists reach their
+    // stable shape without requiring a second formatter run.
+    for (const { open, close, elements } of arrayRanges.sort((left, right) =>
+      (left.close - left.open) - (right.close - right.open)
+    )) {
+      const containsForcedBreak = [...forcedBreak.keys()].some((tokenIndex) => tokenIndex > open && tokenIndex < close);
+      if (containsForcedBreak) formatMultilineDelimitedList(open, close, elements, true);
+    }
+
     // Universal typography rules operate only on trivia between parser tokens.
     // Token spellings, comments, literals, and unsupported syntax are never regenerated.
     const parenStack: number[] = [];
     const bracketStack: number[] = [];
-    const parenDepth: number[] = [];
-    let depth = 0;
     for (let index = 0; index < tokens.length; index++) {
-      const text = normalized.slice(tokens[index].start, tokens[index].end);
-      parenDepth[index] = depth;
-      if (text === "(") { parenStack.push(index); depth++; }
-      if (text === ")") {
-        depth--;
+      if (tokenIs(index, "(")) parenStack.push(index);
+      if (tokenIs(index, ")")) {
         const open = parenStack.pop();
         if (open !== undefined && index > open + 1 && !multilineCalls.has(open)) {
           if (!containsLineBreak(gaps[open] ?? "")) gaps[open] = " ";
           if (!containsLineBreak(gaps[index - 1] ?? "")) gaps[index - 1] = " ";
         }
       }
-      if (text === "[") bracketStack.push(index);
-      if (text === "]") {
+      if (tokenIs(index, "[")) bracketStack.push(index);
+      if (tokenIs(index, "]")) {
         const open = bracketStack.pop();
         if (open !== undefined && index > open + 1) {
           if (!containsLineBreak(gaps[open] ?? "")) gaps[open] = " ";
@@ -428,19 +603,19 @@ export class JavaScriptFormatter implements FormatterEngine {
       const text = normalized.slice(token.start, token.end);
       if (isComment(token)) continue;
 
-      if (text === "(" && index > 0 && attachedParens.has(index) && !containsLineBreak(gaps[index - 1])) gaps[index - 1] = "";
+      if (tokenIs(index, "(") && index > 0 && attachedParens.has(index) && !containsLineBreak(gaps[index - 1])) gaps[index - 1] = "";
 
-      if (text === ",") {
+      if (tokenIs(index, ",")) {
         if (index > 0 && !containsLineBreak(gaps[index - 1])) gaps[index - 1] = "";
         if (index < gaps.length && !containsLineBreak(gaps[index])) gaps[index] = " ";
       }
 
-      if (ASSIGNMENT_OPERATORS.has(text) || BINARY_OPERATORS.has(text)) {
+      if (!jsxDelimiterTokens.has(index) && label(token, normalized) !== "template" && (ASSIGNMENT_OPERATORS.has(text) || BINARY_OPERATORS.has(text))) {
         if (index > 0 && !containsLineBreak(gaps[index - 1])) gaps[index - 1] = " ";
         if (index < gaps.length && !containsLineBreak(gaps[index])) gaps[index] = " ";
       }
 
-      if (text === "{" && index > 0 && blockBraces.has(index) && !containsLineBreak(gaps[index - 1])) gaps[index - 1] = " ";
+      if (tokenIs(index, "{") && index > 0 && blockBraces.has(index) && !containsLineBreak(gaps[index - 1])) gaps[index - 1] = " ";
     }
 
     // TypeScript generic delimiters are punctuation, not comparison operators.
@@ -475,13 +650,30 @@ export class JavaScriptFormatter implements FormatterEngine {
     const braceDepth: number[] = [];
     let braces = 0;
     for (let index = 0; index < tokens.length; index++) {
-      const text = normalized.slice(tokens[index].start, tokens[index].end);
-      if (text === "}") braces = Math.max(0, braces - 1);
+      if (tokenIs(index, "}")) braces = Math.max(0, braces - 1);
       braceDepth[index] = braces;
       // Babel tokenizes a template interpolation as `${` ... `}`. Treat its
       // opening token as a brace so the closing `}` cannot accidentally reduce
       // the surrounding block's indentation depth.
-      if (text === "{" || text === "${") braces++;
+      if (tokenIs(index, "{") || tokenIs(index, "${")) braces++;
+    }
+
+    // JSX line-edge whitespace is layout rather than authored content. Normalize
+    // indentation around it while retaining text content and internal spacing.
+    for (let index = 0; index < tokens.length; index++) {
+      if (label(tokens[index], normalized) !== "jsxText") continue;
+      const text = tokenText(index);
+      if (!containsLineBreak(text)) continue;
+      const nextIsClosingTag = tokenText(index + 1) === "<" && tokenText(index + 2) === "/";
+      const nesting = jsxElementRanges.filter((range) => range.start < tokens[index].start && tokens[index].end < range.end).length;
+      const parenthesized = multilineParenthesizedRanges.filter((range) => range.start < tokens[index].start && tokens[index].end < range.end).length;
+      const childDepth = Math.max(0, braceDepth[index] + parenthesized + nesting);
+      const nextDepth = Math.max(0, childDepth - (nextIsClosingTag ? 1 : 0));
+      if (text.trim() === "") {
+        tokenOverrides.set(index, `\n${options.indent.repeat(nextDepth)}`);
+      } else if (/^[^\S\r\n]*\n/.test(text) && /\n[^\S\r\n]*$/.test(text)) {
+        tokenOverrides.set(index, `\n${options.indent.repeat(childDepth)}${text.trim()}\n${options.indent.repeat(nextDepth)}`);
+      }
     }
 
     for (const [tokenIndex, extra] of forcedBreak) {
@@ -501,9 +693,15 @@ export class JavaScriptFormatter implements FormatterEngine {
       if (ignoredRanges.some((range) => rangeContainsGap(range, gapStart, gapEnd))) gaps[index] = originalGaps[index];
     }
 
-    let result = normalized.slice(0, tokens[0].start) + normalized.slice(tokens[0].start, tokens[0].end);
+    for (const [index] of tokenOverrides) {
+      if (ignoredRanges.some((range) => range.start <= tokens[index].start && tokens[index].end <= range.end)) {
+        tokenOverrides.delete(index);
+      }
+    }
+
+    let result = normalized.slice(0, tokens[0].start) + (tokenOverrides.get(0) ?? normalized.slice(tokens[0].start, tokens[0].end));
     for (let index = 1; index < tokens.length; index++) {
-      result += gaps[index - 1] + normalized.slice(tokens[index].start, tokens[index].end);
+      result += gaps[index - 1] + (tokenOverrides.get(index) ?? normalized.slice(tokens[index].start, tokens[index].end));
     }
     result += normalized.slice(tokens[tokens.length - 1].end);
     return result.trimEnd() + "\n";

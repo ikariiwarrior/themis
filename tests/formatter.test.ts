@@ -14,6 +14,13 @@ async function golden(name: string): Promise<[string, string]> {
   ]);
 }
 
+async function jsxGolden(): Promise<[string, string]> {
+  return Promise.all([
+    readFile(join(here, "golden", "jsx.input.tsx"), "utf8"),
+    readFile(join(here, "golden", "jsx.output.tsx"), "utf8"),
+  ]);
+}
+
 describe("JavaScript/TypeScript formatter", () => {
   for (const name of ["acceptance", "objects-and-return"]) {
     it(`matches the ${name} golden file`, async () => {
@@ -45,6 +52,37 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(output).toContain("/* keep  exact */");
     expect(output).toContain("source?.read( `a  b`");
     expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
+  it("formats JSX and TSX with AST-aware delimiter and attribute rules", async () => {
+    const [input, expected] = await jsxGolden();
+    const output = format(input, { language: "tsx" });
+
+    expect(output).toBe(expected);
+    expect(output).toContain("Keep   exact");
+    expect(format(output, { language: "tsx" })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript", "jsx"] })).not.toThrow();
+  });
+
+  it("formats fragments and nested JSX without rewriting text-bearing nodes", () => {
+    const input = [
+      "function View(){return (<>",
+      "<Header/>",
+      "<main>",
+      "Keep   this text",
+      "<Row value={item.value}/>",
+      "</main>",
+      "</>);}",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "tsx" });
+
+    expect(output).toContain("<>\n        <Header />\n        <main>");
+    expect(output).toContain("Keep   this text");
+    expect(output).toContain("<Row value={item.value} />");
+    expect(output).toContain("</main>\n    </>");
+    expect(format(output, { language: "tsx" })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript", "jsx"] })).not.toThrow();
   });
 
   it("preserves every explicit grouping parenthesis", () => {
@@ -134,7 +172,7 @@ describe("JavaScript/TypeScript formatter", () => {
     const output = format(input, { language: "typescript" });
     expect(output).toContain("left/* keep  exact */ + right");
     expect(output).toContain("return\n    value;");
-    expect(output).toContain("source\n?.read()");
+    expect(output).toContain("source\n    ?.read()");
     expect(format(output, { language: "typescript" })).toBe(output);
     expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
   });
@@ -184,6 +222,33 @@ describe("JavaScript/TypeScript formatter", () => {
     );
   });
 
+  it("normalizes authored multiline continuations", () => {
+    const input = [
+      "function collect(condition:boolean){",
+      "const values=[",
+      "first,",
+      "second,",
+      "third",
+      "];",
+      "const selected=condition",
+      "?first",
+      ":second;",
+      "const result=service",
+      "?.client",
+      ".load();",
+      "return values;",
+      "}",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript" });
+
+    expect(output).toContain("const values = [\n        first,\n        second,\n        third\n    ];");
+    expect(output).toContain("const selected = condition\n        ? first\n        : second;");
+    expect(output).toContain("const result = service\n        ?.client\n        .load();");
+    expect(format(output, { language: "typescript" })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
   it("keeps callback body indentation after a preserved multiline call", () => {
     const input = [
       "export const template=query(z.object({productId:z.number().int()}),async(payload):Promise<Models.TemplateModel|null>=>{",
@@ -207,6 +272,22 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(output).toContain("\n    console.log( result );\n    console.log( payload.productId );\n    if( !result.success || !result.data ) {");
     expect(output).toContain("\n        console.error( `failed: ${payload.productId}` );\n    }");
     expect(output).toContain("\n\n    return ( null );\n} );");
+    expect(format(output, { language: "typescript" })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
+  it("does not interpret template text as structural delimiters", () => {
+    const input = [
+      "const rows=entries.map(([role,token])=>{",
+      "const sessionId=create(token);",
+      "return `('${sessionId}', '${ids[role]}', ${expiresAt})`;",
+      "}).join(',\\n');",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript" });
+
+    expect(output).toContain("return `('${sessionId}', '${ids[ role ]}', ${expiresAt})`;");
+    expect(output).toContain("} ).join( ',\\n' )");
     expect(format(output, { language: "typescript" })).toBe(output);
     expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
   });

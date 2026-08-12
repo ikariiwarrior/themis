@@ -4,7 +4,7 @@
   <img src="assets/themis-mark.png" alt="Themis mark" width="180">
 </p>
 
-Themis is a syntax-aware, intent-preserving, opinionated formatter for JavaScript, TypeScript, Svelte, CSS, and JSON. Its typography rules—not Prettier or Biome output—define the result.
+Themis is a syntax-aware, intent-preserving, opinionated formatter for JavaScript, TypeScript, JSX, TSX, Svelte, CSS, and JSON. Its typography rules—not Prettier or Biome output—define the result.
 
 Implemented in this slice:
 
@@ -16,6 +16,9 @@ Implemented in this slice:
 - compact TypeScript generic delimiters with comma spacing, such as `Map<Key, Value>`;
 - contextual TypeScript punctuation for annotations, optional members, conditional types, ternaries, `as`, `satisfies`, and type operators;
 - normalized import/export braces and keywords;
+- AST-aware JSX/TSX tag delimiters, compact expression containers, self-closing tags, fragments, and prop layout;
+- width-driven JSX prop expansion that never collapses an authored multiline opening tag;
+- stable continuation indentation for authored multiline calls, arrays, member chains, ternaries, nested callbacks, and parenthesized expressions;
 - multiline class and interface bodies;
 - preservation of every explicit grouping parenthesis;
 - JavaScript/TypeScript block braces on the statement line;
@@ -166,7 +169,7 @@ Build and install the development VSIX:
 ```sh
 npm run vscode:install
 npm run vscode:package
-code --install-extension editors/vscode/dist/themis-vscode-0.2.0.vsix
+code --install-extension editors/vscode/dist/themis-vscode-0.3.0.vsix
 ```
 
 Then add this to `.vscode/settings.json`:
@@ -184,9 +187,9 @@ The extension uses the same `themis.json`, `.themisignore`, and failure-without-
 
 ## Safety boundary
 
-The formatter parses every selected file before changing any of them. It reconstructs output from the parser's original tokens and changes only inter-token trivia. It never asks Prettier, Biome, or Babel's code generator to reprint an unknown node. Consequently, unsupported-but-parseable syntax keeps its original token spelling, comments, and literals. Invalid input produces a `FormatError`; the CLI exits unsuccessfully and `--write` leaves the whole selected set untouched. Successful writes use a temporary sibling file and atomic replacement.
+The formatter parses every selected file before changing any of them. It reconstructs output from the parser's original tokens and changes inter-token trivia plus layout-only JSX whitespace nodes. Text-bearing JSX content retains its text and internal spacing. It never asks Prettier, Biome, or Babel's code generator to reprint an unknown node. Consequently, unsupported-but-parseable syntax keeps its original token spelling, comments, and literals. Invalid input produces a `FormatError`; the CLI exits unsuccessfully and `--write` leaves the whole selected set untouched. Successful writes use a temporary sibling file and atomic replacement.
 
-This is intentionally a proof of concept rather than a production-complete web formatter. JSX/TSX parses through the JS/TS engine, but JSX-specific typography is not yet implemented. Svelte markup expressions are preserved rather than reformatted. Plain CSS is formatted structurally, while selector contents, declaration values, comments, unknown at-rules, and `@apply` utility order remain intact. The current width heuristic expands long call argument lists; future node rules can add semantic break opportunities without changing the host contract.
+This remains an intentionally evolving formatter rather than a production-complete web formatter. JSX/TSX layout now covers tag punctuation, props, fragments, expression containers, nested layout, and width pressure; specialized expression wrapping and comment placement can continue to grow behind the same AST contract. Svelte markup expressions are preserved rather than reformatted. Plain CSS is formatted structurally, while selector contents, declaration values, comments, unknown at-rules, and `@apply` utility order remain intact.
 
 ## Tailwind boundary
 

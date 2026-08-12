@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0 - Unreleased
+
+- Add first-class JSX/TSX layout and hardened multiline JavaScript/TypeScript indentation.
+
 ## 0.2.1 - 2026-08-12
 
 - Fix JavaScript and TypeScript block indentation after template-literal interpolations.

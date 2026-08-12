@@ -34,5 +34,5 @@ Build and install the VSIX from the repository root:
 ```sh
 npm run vscode:install
 npm run vscode:package
-code --install-extension editors/vscode/dist/themis-vscode-0.2.0.vsix
+code --install-extension editors/vscode/dist/themis-vscode-0.3.0.vsix
 ```

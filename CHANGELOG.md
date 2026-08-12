@@ -2,6 +2,13 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.3.0 - Unreleased
+
+- Add AST-aware JSX/TSX formatting for tags, props, fragments, expression containers, nested layout, and soft-width expansion.
+- Normalize authored multiline arrays, calls, member chains, ternaries, callbacks, and parenthesized expressions without collapsing them.
+- Prevent template-literal text from being interpreted as structural punctuation.
+- Expand enclosing arrays in the same pass when nested formatting introduces multiline layout.
+
 ## 0.2.1 - 2026-08-12
 
 - Fix JavaScript and TypeScript block indentation after template-literal interpolations.

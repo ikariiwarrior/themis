@@ -2,7 +2,7 @@
     "name": "themis-formatter",
     "displayName": "Themis Formatter",
     "description": "Format JavaScript, TypeScript, Svelte, CSS, and JSON with Themis.",
-    "version": "0.2.1",
+    "version": "0.3.0",
     "publisher": "ikarii",
     "license": "SEE LICENSE IN LICENSE",
     "pricing": "Free",

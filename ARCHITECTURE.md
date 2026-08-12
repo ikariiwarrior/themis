@@ -68,9 +68,10 @@ There is no runtime formatter dependency and no fallback to Prettier or Biome.
 The formatter performs four stages:
 
 1. Parse the whole source file into an AST plus tokens.
-2. Walk known AST nodes to annotate blocks, object literals, calls, statements, concluding returns, generics, and contextual TypeScript punctuation.
+2. Walk known AST nodes to annotate blocks, object literals, calls, arrays, continuations, JSX layout, statements, concluding returns, generics, and contextual TypeScript punctuation.
 3. Apply global typography rules to trivia between tokens, then apply AST-context overrides where a token such as `<`, `>`, `?`, or `:` has multiple grammatical meanings.
-4. Reassemble original tokens with the selected trivia and one final newline.
+4. Normalize layout-only JSX text nodes at multiline child boundaries while retaining text content and internal spacing.
+5. Reassemble original tokens with the selected trivia and one final newline.
 
 Existing multiline constructs are never collapsed. `lineWidth` is consulted only for expansion. This makes the output deterministic and idempotent while preserving authored grouping and unsupported syntax.
 
@@ -90,12 +91,12 @@ The suite has three complementary layers:
 - Babel reparses every golden output to establish syntax validity;
 - every formatted output is formatted a second time to establish idempotence.
 
-Focused tests cover comments/literals, optional chaining, TypeScript syntax, grouping parentheses, direct-argument objects, return spacing, and soft-width expansion.
+Focused tests cover comments/literals, template token boundaries, optional chaining, TypeScript syntax, grouping parentheses, direct-argument objects, return spacing, JSX/TSX punctuation and nesting, multiline continuations, and soft-width expansion.
 
 Escape-directive tests cover next-node preservation, bounded regions, malformed markers, CSS nodes, embedded Svelte regions, and second-pass idempotence.
 
 Project integration tests additionally cover configuration discovery and validation, ignore precedence, directory discovery, check/list/write modes, exit codes, atomic writes, and all-or-nothing parse preflight.
 
-The editor adapter has focused tests for VS Code language mapping, minimal edit calculation, shared configuration, ignored documents, and bounded project-local formatter discovery. Packaging is smoke-tested by installing the VSIX into an isolated extension directory and verifying the registered `ikarii-warrior.themis` identifier.
+The editor adapter has focused tests for VS Code language mapping, minimal edit calculation, shared configuration, ignored documents, and bounded project-local formatter discovery. Packaging is smoke-tested by loading the bundle in an isolated extension-host shim and verifying formatter registration for the published `ikarii.themis-formatter` extension.
 
 The development-only corpus checker provides another layer against real applications: every discovered JS/TS file must parse, format, parse again, and produce identical output on the second pass. It never writes to the corpus.

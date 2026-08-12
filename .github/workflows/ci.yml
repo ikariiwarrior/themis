@@ -47,4 +47,3 @@ jobs:
           name: themis-vscode
           path: editors/vscode/dist/*.vsix
           if-no-files-found: error
-

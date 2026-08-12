@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const script = fileURLToPath(new URL("./verify-release-version.mjs", import.meta.url));
+const packageVersion = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 
 function verify(reference) {
   return spawnSync(process.execPath, [script], {
@@ -19,7 +21,7 @@ test("accepts ordinary GitHub branch references", () => {
 });
 
 test("accepts a matching release tag", () => {
-  assert.equal(verify("v0.2.0").status, 0);
+  assert.equal(verify(`v${packageVersion}`).status, 0);
 });
 
 test("rejects a mismatched release tag", () => {

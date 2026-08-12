@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 - 2026-08-12
+
+- Fix JavaScript and TypeScript block indentation after template-literal interpolations.
+
 ## 0.2.0 - 2026-08-12
 
 - Add Themis branding and Marketplace presentation metadata.

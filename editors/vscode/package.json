@@ -9,6 +9,15 @@
         "type": "git",
         "url": "https://github.com/ikariiwarrior/themis.git"
     },
+    "homepage": "https://github.com/ikariiwarrior/themis#readme",
+    "bugs": {
+        "url": "https://github.com/ikariiwarrior/themis/issues"
+    },
+    "icon": "images/themis-mark.png",
+    "galleryBanner": {
+        "color": "#eef3ff",
+        "theme": "light"
+    },
     "engines": {
         "vscode": "^1.90.0"
     },

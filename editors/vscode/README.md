@@ -1,5 +1,9 @@
 # Themis for Visual Studio Code
 
+<p align="center">
+    <img src="images/themis-mark.png" alt="Themis mark" width="180">
+</p>
+
 This extension makes Themis a native Visual Studio Code formatter for JavaScript, TypeScript, JSX, TSX, Svelte, CSS (including the Tailwind CSS language mode), and JSON.
 
 The extension contains a bundled formatter, so it works without a global or project installation. In trusted workspaces it prefers a project-local `@ikarii_warrior/themis` dependency when one is available, allowing teams to pin the CLI, CI, and editor to the same version. Set `themis.useLocalVersion` to `false` to always use the bundled engine.

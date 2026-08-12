@@ -1,5 +1,9 @@
 # Themis
 
+<p align="center">
+  <img src="assets/themis-mark.png" alt="Themis mark" width="180">
+</p>
+
 Themis is a syntax-aware, intent-preserving, opinionated formatter for JavaScript, TypeScript, Svelte, CSS, and JSON. Its typography rules—not Prettier or Biome output—define the result.
 
 Implemented in this slice:

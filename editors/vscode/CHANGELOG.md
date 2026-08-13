@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0 - 2026-08-13
+
+- Format Svelte markup expressions, attributes, directives, special tags, and control blocks with stable AST-aware indentation.
+- Preserve literal class contents and Tailwind ordering while expanding authored or width-pressured opening tags.
+- Fix second-pass JavaScript/TypeScript width expansion and template-interpolation nesting discovered by the repository corpus.
+
 ## 0.3.0 - 2026-08-12
 
 - Add first-class JSX/TSX layout and hardened multiline JavaScript/TypeScript indentation.

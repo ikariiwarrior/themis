@@ -222,6 +222,22 @@ describe("JavaScript/TypeScript formatter", () => {
     );
   });
 
+  it("applies width pressure after its own typography changes", () => {
+    const input = "const result=calculate(alpha,beta,gamma,delta);\n";
+    const output = format(input, { language: "typescript", lineWidth: 36 });
+
+    expect(output).toBe([
+      "const result = calculate(",
+      "    alpha,",
+      "    beta,",
+      "    gamma,",
+      "    delta",
+      ");",
+      "",
+    ].join("\n"));
+    expect(format(output, { language: "typescript", lineWidth: 36 })).toBe(output);
+  });
+
   it("normalizes authored multiline continuations", () => {
     const input = [
       "function collect(condition:boolean){",
@@ -288,6 +304,24 @@ describe("JavaScript/TypeScript formatter", () => {
 
     expect(output).toContain("return `('${sessionId}', '${ids[ role ]}', ${expiresAt})`;");
     expect(output).toContain("} ).join( ',\\n' )");
+    expect(format(output, { language: "typescript" })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
+  it("keeps object nesting balanced across template interpolations", () => {
+    const input = [
+      "const provider={format(){",
+      "const a=`${one}`;",
+      "const b=`${two}`;",
+      "const c=`${three}`;",
+      "const d=`${four}`;",
+      "return [replace(new Range(first(),second()),value)];",
+      "}};",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript" });
+
+    expect(output).toContain("new Range( first(), second() )");
     expect(format(output, { language: "typescript" })).toBe(output);
     expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
   });

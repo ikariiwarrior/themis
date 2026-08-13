@@ -135,7 +135,6 @@ export class JavaScriptFormatter implements FormatterEngine {
     const forcedBreak = new Map<number, number>();
     const forcedBlank = new Map<number, number>();
     const multilineObjects = new Set<number>();
-    const multilineCalls = new Set<number>();
     const blockBraces = new Map<number, number>();
     const attachedParens = new Set<number>();
     const genericAngles: Array<{ open: number; close: number }> = [];
@@ -151,6 +150,14 @@ export class JavaScriptFormatter implements FormatterEngine {
     const jsxDelimiterTokens = new Set<number>();
     const tokenOverrides = new Map<number, string>();
     const arrayRanges: Array<{ open: number; close: number; elements: Node[] }> = [];
+    const callRanges: Array<{
+      start: number;
+      end: number;
+      open: number;
+      close: number;
+      args: Node[];
+      authoredMultiline: boolean;
+    }> = [];
 
     const tokenText = (index: number): string => normalized.slice(tokens[index].start, tokens[index].end);
     const tokenIs = (index: number, text: string): boolean => label(tokens[index], normalized) === text;
@@ -179,7 +186,7 @@ export class JavaScriptFormatter implements FormatterEngine {
       forcedBreak.set(close, 0);
       let nestedDepth = 0;
       for (let index = open + 1; index < close; index++) {
-        if (["(", "[", "{"].some((text) => tokenIs(index, text))) nestedDepth++;
+        if (["(", "[", "{", "${"].some((text) => tokenIs(index, text))) nestedDepth++;
         if ([")", "]", "}"].some((text) => tokenIs(index, text))) nestedDepth--;
         if (tokenIs(index, ",") && nestedDepth === 0) forcedBreak.set(index + 1, 0);
       }
@@ -489,22 +496,19 @@ export class JavaScriptFormatter implements FormatterEngine {
       }
 
       if ((node.type === "CallExpression" || node.type === "NewExpression") && node.start != null && node.end != null) {
-        const text = normalized.slice(node.start, node.end);
-        const authoredMultiline = containsLineBreak(text);
-        if (authoredMultiline || text.length > options.lineWidth) {
-          const callee = node.callee as Node | undefined;
-          const open = findToken(tokens, callee?.end ?? node.start, node.end, "(", normalized);
-          const close = locate(tokens, node.end, true);
-          if (open !== undefined && close !== undefined && close > open + 1) {
-            const args = Array.isArray(node.arguments) ? node.arguments as Node[] : [];
-            const expand = !authoredMultiline || breakWasAuthoredBefore(open + 1) || args.some((argument) => {
-              if (argument.start == null) return false;
-              const argumentToken = locate(tokens, argument.start);
-              return argumentToken !== undefined && breakWasAuthoredBefore(argumentToken);
-            }) || breakWasAuthoredBefore(close);
-            if (expand) multilineCalls.add(open);
-            formatMultilineDelimitedList(open, close, args, expand);
-          }
+        const callee = node.callee as Node | undefined;
+        const open = findToken(tokens, callee?.end ?? node.start, node.end, "(", normalized);
+        const close = locate(tokens, node.end, true);
+        const start = locate(tokens, node.start);
+        if (start !== undefined && open !== undefined && close !== undefined && close > open + 1) {
+          callRanges.push({
+            start,
+            end: close,
+            open,
+            close,
+            args: Array.isArray(node.arguments) ? node.arguments as Node[] : [],
+            authoredMultiline: containsLineBreak(normalized.slice(node.start, node.end)),
+          });
         }
       }
 
@@ -577,27 +581,6 @@ export class JavaScriptFormatter implements FormatterEngine {
 
     // Universal typography rules operate only on trivia between parser tokens.
     // Token spellings, comments, literals, and unsupported syntax are never regenerated.
-    const parenStack: number[] = [];
-    const bracketStack: number[] = [];
-    for (let index = 0; index < tokens.length; index++) {
-      if (tokenIs(index, "(")) parenStack.push(index);
-      if (tokenIs(index, ")")) {
-        const open = parenStack.pop();
-        if (open !== undefined && index > open + 1 && !multilineCalls.has(open)) {
-          if (!containsLineBreak(gaps[open] ?? "")) gaps[open] = " ";
-          if (!containsLineBreak(gaps[index - 1] ?? "")) gaps[index - 1] = " ";
-        }
-      }
-      if (tokenIs(index, "[")) bracketStack.push(index);
-      if (tokenIs(index, "]")) {
-        const open = bracketStack.pop();
-        if (open !== undefined && index > open + 1) {
-          if (!containsLineBreak(gaps[open] ?? "")) gaps[open] = " ";
-          if (!containsLineBreak(gaps[index - 1] ?? "")) gaps[index - 1] = " ";
-        }
-      }
-    }
-
     for (let index = 0; index < tokens.length; index++) {
       const token = tokens[index];
       const text = normalized.slice(token.start, token.end);
@@ -644,6 +627,48 @@ export class JavaScriptFormatter implements FormatterEngine {
     }
     for (const tokenIndex of spacedAfter) {
       if (tokenIndex < gaps.length && !containsLineBreak(gaps[tokenIndex])) gaps[tokenIndex] = " ";
+    }
+
+    const parenStack: number[] = [];
+    const bracketStack: number[] = [];
+    for (let index = 0; index < tokens.length; index++) {
+      if (tokenIs(index, "(")) parenStack.push(index);
+      if (tokenIs(index, ")")) {
+        const open = parenStack.pop();
+        if (open !== undefined && index > open + 1) {
+          if (!containsLineBreak(gaps[open] ?? "")) gaps[open] = " ";
+          if (!containsLineBreak(gaps[index - 1] ?? "")) gaps[index - 1] = " ";
+        }
+      }
+      if (tokenIs(index, "[")) bracketStack.push(index);
+      if (tokenIs(index, "]")) {
+        const open = bracketStack.pop();
+        if (open !== undefined && index > open + 1) {
+          if (!containsLineBreak(gaps[open] ?? "")) gaps[open] = " ";
+          if (!containsLineBreak(gaps[index - 1] ?? "")) gaps[index - 1] = " ";
+        }
+      }
+    }
+
+    // Width pressure is based on the prospective formatted token span, not the
+    // raw source slice. Otherwise spaces inserted above can push a call past the
+    // limit only after the first pass and make it expand on the second.
+    const formattedRangeLength = (start: number, end: number): number => {
+      let length = 0;
+      for (let index = start; index <= end; index++) {
+        length += tokenText(index).length;
+        if (index < end) length += gaps[index]?.length ?? 0;
+      }
+      return length;
+    };
+    for (const call of callRanges) {
+      if (!call.authoredMultiline && formattedRangeLength(call.start, call.end) <= options.lineWidth) continue;
+      const expand = !call.authoredMultiline || breakWasAuthoredBefore(call.open + 1) || call.args.some((argument) => {
+        if (argument.start == null) return false;
+        const argumentToken = locate(tokens, argument.start);
+        return argumentToken !== undefined && breakWasAuthoredBefore(argumentToken);
+      }) || breakWasAuthoredBefore(call.close);
+      formatMultilineDelimitedList(call.open, call.close, call.args, expand);
     }
 
     // Compute lexical brace depth for indentation introduced by this formatter.

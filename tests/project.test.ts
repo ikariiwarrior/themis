@@ -143,7 +143,7 @@ describe("multi-file CLI", () => {
 
     const first = await execute(root, ["--write", "--cache", "src"]);
     expect(first.stdout).toBe("Formatted 2 files; 0 unchanged.\n");
-    expect(JSON.parse(await readFile(join(root, ".themis-cache"), "utf8"))).toMatchObject({ schema: 1, formatterVersion: "0.3.0" });
+    expect(JSON.parse(await readFile(join(root, ".themis-cache"), "utf8"))).toMatchObject({ schema: 1, formatterVersion: "0.4.0" });
 
     const second = await execute(root, ["--write", "--cache", "src"]);
     expect(second.stdout).toBe("Formatted 0 files; 0 unchanged; 2 cached.\n");

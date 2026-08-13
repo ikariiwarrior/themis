@@ -3,6 +3,7 @@
 ## 0.3.0 - Unreleased
 
 - Add first-class JSX/TSX layout and hardened multiline JavaScript/TypeScript indentation.
+- Bundle the 0.3 engine with cache/watch-capable project tooling for CLI users.
 
 ## 0.2.1 - 2026-08-12
 

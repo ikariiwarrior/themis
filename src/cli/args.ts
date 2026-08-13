@@ -5,6 +5,9 @@ export interface CliArguments {
   inputs: string[];
   configPath?: string;
   stdinFilePath?: string;
+  cache: boolean;
+  cacheLocation?: string;
+  watch: boolean;
   help: boolean;
 }
 
@@ -15,7 +18,7 @@ function takeValue(args: string[], index: number, option: string): string {
 }
 
 export function parseArgs(args: string[]): CliArguments {
-  const result: CliArguments = { mode: "stdout", inputs: [], help: false };
+  const result: CliArguments = { mode: "stdout", inputs: [], cache: false, watch: false, help: false };
   let selectedMode: CliMode | undefined;
 
   for (let index = 0; index < args.length; index++) {
@@ -32,9 +35,20 @@ export function parseArgs(args: string[]): CliArguments {
     } else if (arg === "--stdin-file-path") {
       result.stdinFilePath = takeValue(args, index, arg);
       index++;
+    } else if (arg === "--cache") {
+      result.cache = true;
+    } else if (arg === "--cache-location") {
+      result.cache = true;
+      result.cacheLocation = takeValue(args, index, arg);
+      index++;
+    } else if (arg === "--watch") {
+      result.watch = true;
     } else if (arg.startsWith("-")) throw new Error(`Unknown option: ${arg}`);
     else result.inputs.push(arg);
   }
+
+  if (result.watch && result.mode !== "write") throw new Error("--watch requires --write.");
+  if (result.cache && result.mode === "stdout") throw new Error("--cache requires --write, --check, or --list-different.");
 
   return result;
 }
@@ -47,5 +61,8 @@ Options:
   --list-different        Print files that would change and exit 1
   --config <path>         Use an explicit themis.json file
   --stdin-file-path <p>   Select a language for stdin
+  --cache                 Skip files already verified with this version/config
+  --cache-location <p>    Store cache at a custom path (default .themis-cache)
+  --watch                 Keep formatting changes; requires --write
   -h, --help              Show this help
 `;

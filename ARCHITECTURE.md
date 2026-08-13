@@ -20,7 +20,7 @@ CLI adapter       VS Code adapter
              svelte/compiler AST
 ```
 
-`src/core` owns the shared language, option, error, and engine contracts. `src/js` owns parsing and JavaScript/TypeScript layout decisions. `src/project` owns validated configuration, file discovery, ignore semantics, and atomic writes. `src/cli` owns argument and exit-code behavior without containing formatting policy.
+`src/core` owns the shared language, option, error, and engine contracts. `src/js` owns parsing and JavaScript/TypeScript layout decisions. `src/project` owns validated configuration, file discovery, ignore semantics, versioned content caching, and atomic writes. `src/cli` owns argument, watch orchestration, and exit-code behavior without containing formatting policy.
 
 `editors/vscode` is a separately packaged native document-formatting provider. Its bundle contains the formatter for zero-setup use. In trusted workspaces it searches from the document toward the workspace root for a project-local `@ikarii_warrior/themis`, dynamically imports that version when present, and otherwise uses the bundled engine. Configuration and ignore decisions always pass through the shared project layer. The adapter computes a narrow single replacement from the common prefix and suffix instead of replacing the entire document.
 
@@ -59,13 +59,15 @@ Biome's Rust parser and generic formatter infrastructure remain attractive for a
 - `jsonc-parser` supplies a source-ranged JSON tree; strict parser options reject JSONC features while raw scalar slices preserve escape and numeric spellings.
 - Node built-ins provide file and stdin/stdout handling.
 
+The watch layer uses Node's recursive filesystem watcher and deliberately reruns normal project discovery after a debounced event. It does not maintain a second, subtly different ignore matcher. The optional persistent cache makes full-input watch passes cheap: a cache entry binds the package version, resolved options, absolute path, and SHA-256 source digest. Cached state is written atomically only after a successful pass; malformed files preserve the previous cache and the all-or-nothing source-write guarantee.
+
 The VS Code package keeps its build-only dependencies isolated under `editors/vscode`: `esbuild` produces one extension-host bundle, `@types/vscode` type-checks the stable API surface, and `@vscode/vsce` creates the installable VSIX. None are runtime dependencies of the npm formatter package.
 
 There is no runtime formatter dependency and no fallback to Prettier or Biome.
 
 ## Printer model
 
-The formatter performs four stages:
+The formatter performs five stages:
 
 1. Parse the whole source file into an AST plus tokens.
 2. Walk known AST nodes to annotate blocks, object literals, calls, arrays, continuations, JSX layout, statements, concluding returns, generics, and contextual TypeScript punctuation.
@@ -95,7 +97,7 @@ Focused tests cover comments/literals, template token boundaries, optional chain
 
 Escape-directive tests cover next-node preservation, bounded regions, malformed markers, CSS nodes, embedded Svelte regions, and second-pass idempotence.
 
-Project integration tests additionally cover configuration discovery and validation, ignore precedence, directory discovery, check/list/write modes, exit codes, atomic writes, and all-or-nothing parse preflight.
+Project integration tests additionally cover configuration discovery and validation, ignore precedence, directory discovery, check/list/write/watch modes, cache invalidation, configuration reload, exit codes, atomic writes, and all-or-nothing parse preflight.
 
 The editor adapter has focused tests for VS Code language mapping, minimal edit calculation, shared configuration, ignored documents, and bounded project-local formatter discovery. Packaging is smoke-tested by loading the bundle in an isolated extension-host shim and verifying formatter registration for the published `ikarii.themis-formatter` extension.
 

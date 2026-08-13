@@ -8,6 +8,9 @@ All notable changes to Themis are recorded here.
 - Normalize authored multiline arrays, calls, member chains, ternaries, callbacks, and parenthesized expressions without collapsing them.
 - Prevent template-literal text from being interpreted as structural punctuation.
 - Expand enclosing arrays in the same pass when nested formatting introduces multiline layout.
+- Add versioned content caching with safe configuration and source-hash invalidation.
+- Add debounced watch mode with project configuration and ignore reloads.
+- Document CI, lint-script, and `lint-staged` integration patterns.
 
 ## 0.2.1 - 2026-08-12
 

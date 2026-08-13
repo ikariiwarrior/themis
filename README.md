@@ -90,6 +90,50 @@ npm run format -- --list-different src
 
 The CLI accepts multiple files, directories, and globs. Multiple inputs require `--write`, `--check`, or `--list-different`. It recursively discovers JavaScript, TypeScript, Svelte, CSS, and JSON extensions and honors `.gitignore`, `.themisignore`, the legacy `.opinionignore` alias, built-in dependency/build exclusions, and configured ignore patterns.
 
+For repeated local or CI runs, enable the content-addressed cache:
+
+```sh
+npx themis --check --cache src tests
+npx themis --write --cache src
+```
+
+The default cache is `.themis-cache`; add it to `.gitignore`. `--cache-location <path>` can place it under an existing cache convention such as `node_modules/.cache/themis`. Entries are valid only for the exact Themis version, resolved formatting configuration, absolute file path, and source hash. Only files proven clean are cached, and parse failures never update the cache.
+
+To format changes outside an editor integration:
+
+```sh
+npx themis --write --watch --cache src tests
+```
+
+Watch mode runs one complete all-or-nothing write pass, then debounces supported filesystem changes. It reloads `themis.json`, ignore files, and discovery on every pass. Press Ctrl+C to stop it. The VS Code extension already handles format-on-save directly, so most VS Code users should use one workflow or the other rather than both.
+
+## Lint and pre-commit integration
+
+Themis needs no ESLint formatter plugin. Give linting and formatting separate commands so each tool reports its own failures:
+
+```json
+{
+  "scripts": {
+    "format": "themis --write --cache src tests",
+    "format:check": "themis --check --cache src tests",
+    "lint": "eslint src tests",
+    "validate": "npm run format:check && npm run lint && npm test"
+  }
+}
+```
+
+For staged-file formatting with `lint-staged`, install it using the workflow your project prefers and add:
+
+```json
+{
+  "lint-staged": {
+    "*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,svelte,css,json}": "themis --write"
+  }
+}
+```
+
+`lint-staged` appends its matched filenames and re-stages successful edits. Omitting `--cache` keeps the hook self-contained and avoids creating a cache file during commits. A CI job should run `npm run format:check`; exit code `1` means formatting differs, while `2` means configuration, parsing, or I/O failed.
+
 Exit codes are stable for automation:
 
 - `0`: success, or every checked file is already formatted;

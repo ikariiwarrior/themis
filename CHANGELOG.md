@@ -2,6 +2,14 @@
 
 All notable changes to Themis are recorded here.
 
+## Unreleased
+
+- Format Svelte markup expressions, expression attributes, spreads, directives, block conditions, and snippet parameters from Svelte compiler AST ranges.
+- Structurally indent Svelte `if`, `each`, `await`, `key`, and `snippet` blocks, including `else if`, shorthand await branches, nested blocks, comments, text-only branches, and authored blank lines.
+- Format `{@const}` declarations and `{@debug}` identifier lists explicitly.
+- Expand pressured or authored multiline opening tags with stable multiline expression indentation while preserving literal attribute contents, attribute order, and Tailwind class order and spacing.
+- Add Svelte golden, syntax-validity, idempotence, TypeScript-expression, special-element, directive, comment, and multiline regression coverage.
+
 ## 0.3.0 - 2026-08-12
 
 - Add AST-aware JSX/TSX formatting for tags, props, fragments, expression containers, nested layout, and soft-width expansion.

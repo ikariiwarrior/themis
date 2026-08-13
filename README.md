@@ -27,9 +27,10 @@ Implemented in this slice:
 - a soft, configurable line width (120 by default) that expands long calls and never collapses authored multiline constructs;
 - a blank line before a concluding `return` only when earlier statements performed work;
 - preservation of token spelling, comments, literals, and syntax outside the implemented layout rules;
-- Svelte component parsing through the official compiler, with module and instance scripts delegated to the JS/TS engine;
+- Svelte component parsing through the official compiler, with markup expressions plus module and instance scripts delegated to the JS/TS engine;
+- AST-aware Svelte attribute/directive layout and structural indentation for `if`, `each`, `await`, `key`, and `snippet` blocks;
 - syntax-aware CSS formatting for standalone `.css` files and ordinary Svelte `<style>` regions;
-- byte-preservation of Svelte markup and Tailwind class values, including class ordering;
+- preservation of Svelte literal attribute contents and Tailwind class values, including spacing and class ordering;
 - strict JSON formatting with raw string/number spelling preservation and soft-width array expansion.
 
 The acceptance example formats as:
@@ -233,7 +234,7 @@ The extension uses the same `themis.json`, `.themisignore`, and failure-without-
 
 The formatter parses every selected file before changing any of them. It reconstructs output from the parser's original tokens and changes inter-token trivia plus layout-only JSX whitespace nodes. Text-bearing JSX content retains its text and internal spacing. It never asks Prettier, Biome, or Babel's code generator to reprint an unknown node. Consequently, unsupported-but-parseable syntax keeps its original token spelling, comments, and literals. Invalid input produces a `FormatError`; the CLI exits unsuccessfully and `--write` leaves the whole selected set untouched. Successful writes use a temporary sibling file and atomic replacement.
 
-This remains an intentionally evolving formatter rather than a production-complete web formatter. JSX/TSX layout now covers tag punctuation, props, fragments, expression containers, nested layout, and width pressure; specialized expression wrapping and comment placement can continue to grow behind the same AST contract. Svelte markup expressions are preserved rather than reformatted. Plain CSS is formatted structurally, while selector contents, declaration values, comments, unknown at-rules, and `@apply` utility order remain intact.
+This remains an intentionally evolving formatter rather than a production-complete web formatter. JSX/TSX layout now covers tag punctuation, props, fragments, expression containers, nested layout, and width pressure; specialized expression wrapping and comment placement can continue to grow behind the same AST contract. Svelte markup expressions, expression attributes, spreads, directives, special tags, and control blocks are formatted from compiler-owned ranges. Literal attribute text, inline text content, comments, attribute order, and authored multiline intent remain source-owned. Plain CSS is formatted structurally, while selector contents, declaration values, comments, unknown at-rules, and `@apply` utility order remain intact.
 
 ## Tailwind boundary
 

@@ -79,7 +79,9 @@ Existing multiline constructs are never collapsed. `lineWidth` is consulted only
 
 Escape directives are parser-aware rather than textual pre-processing. The JavaScript engine resolves a single ignore to the outermost node at the next source position and restores original trivia for gaps within that protected range after every layout rule has run. Bounded regions restore every contained token gap. The CSS engine marks protected PostCSS nodes and excludes them from structural mutation. Svelte receives the same behavior through script/style delegation. The whole document is still parsed, so directives cannot hide invalid syntax.
 
-The Svelte engine parses the complete component, obtains exact embedded-region ranges from the official AST, formats recognized JavaScript/TypeScript scripts and ordinary CSS styles, and applies replacements from the end of the document backward. It never searches for script or style tags with regular expressions. Markup and attributes—including Tailwind class order—remain byte-for-byte unchanged apart from global newline normalization and the final newline. Explicit non-CSS style languages are left untouched when the Svelte parser can represent them.
+The Svelte engine parses the complete component and obtains exact ranges from the official modern AST. Recognized JavaScript/TypeScript scripts and ordinary CSS styles delegate only their content ranges to the existing engines. Markup expressions, expression attributes, spreads, directives, block conditions, snippet parameters, `{@const}`, and `{@debug}` use their AST-owned JavaScript ranges; the entire component is never delegated to another formatter.
+
+Svelte owns opening-tag layout and structural fragment whitespace. Width pressure may expand an opening tag, but an authored multiline opening is never collapsed. `if`, `each`, `await`, `key`, and `snippet` fragments receive stable nested indentation, including `else if`, shorthand await branches, comments, blank lines, and text-only branches. Literal attribute segments, Tailwind class contents and ordering, attribute ordering, inline text, and unsupported parseable regions retain their source spelling. Replacements are range-checked for overlap and applied from the end of the document backward. Explicit non-CSS style languages are left untouched when the Svelte parser can represent them.
 
 The CSS engine changes container layout and declaration colon spacing through PostCSS `raws`. Selectors, values, custom properties, comments, unknown at-rules, and `@apply` parameters are retained. Invalid CSS fails preflight and is never delegated to another formatter.
 
@@ -93,7 +95,7 @@ The suite has three complementary layers:
 - Babel reparses every golden output to establish syntax validity;
 - every formatted output is formatted a second time to establish idempotence.
 
-Focused tests cover comments/literals, template token boundaries, optional chaining, TypeScript syntax, grouping parentheses, direct-argument objects, return spacing, JSX/TSX punctuation and nesting, multiline continuations, and soft-width expansion.
+Focused tests cover comments/literals, template token boundaries, optional chaining, TypeScript syntax, grouping parentheses, direct-argument objects, return spacing, JSX/TSX punctuation and nesting, multiline continuations, soft-width expansion, and Svelte markup expressions, attributes/directives, special tags, nested control blocks, comments, blank lines, syntax validity, and idempotence.
 
 Escape-directive tests cover next-node preservation, bounded regions, malformed markers, CSS nodes, embedded Svelte regions, and second-pass idempotence.
 
@@ -101,4 +103,4 @@ Project integration tests additionally cover configuration discovery and validat
 
 The editor adapter has focused tests for VS Code language mapping, minimal edit calculation, shared configuration, ignored documents, and bounded project-local formatter discovery. Packaging is smoke-tested by loading the bundle in an isolated extension-host shim and verifying formatter registration for the published `ikarii.themis-formatter` extension.
 
-The development-only corpus checker provides another layer against real applications: every discovered JS/TS file must parse, format, parse again, and produce identical output on the second pass. It never writes to the corpus.
+The development-only corpus checker provides another layer against real applications: every discovered supported file must parse, format, parse again, and produce identical output on the second pass. It never writes to the corpus.

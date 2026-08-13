@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 - Unreleased
+## 0.3.0 - 2026-08-12
 
 - Add first-class JSX/TSX layout and hardened multiline JavaScript/TypeScript indentation.
 - Bundle the 0.3 engine with cache/watch-capable project tooling for CLI users.

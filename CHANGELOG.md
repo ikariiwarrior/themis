@@ -2,7 +2,7 @@
 
 All notable changes to Themis are recorded here.
 
-## 0.3.0 - Unreleased
+## 0.3.0 - 2026-08-12
 
 - Add AST-aware JSX/TSX formatting for tags, props, fragments, expression containers, nested layout, and soft-width expansion.
 - Normalize authored multiline arrays, calls, member chains, ternaries, callbacks, and parenthesized expressions without collapsing them.

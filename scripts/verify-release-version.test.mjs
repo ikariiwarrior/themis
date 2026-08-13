@@ -29,3 +29,9 @@ test("rejects a mismatched release tag", () => {
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /does not match/);
 });
+
+test("verifies package manifests, lockfiles, and the bundled extension engine", () => {
+  const result = verify("main");
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, new RegExp(`release ${packageVersion}`));
+});

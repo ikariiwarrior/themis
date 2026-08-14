@@ -145,11 +145,13 @@ export class JavaScriptFormatter implements FormatterEngine {
     const directArgumentObjects = new Set<Node>();
     const compactArgumentObjectTrees = new Set<Node>();
     const compactArgumentObjectRanges: Array<{ open: number; close: number }> = [];
+    const objectPropertyTokens = new Map<number, number[]>();
     const jsxElementRanges: SourceRange[] = [];
     const multilineParenthesizedRanges: SourceRange[] = [];
     const jsxDelimiterTokens = new Set<number>();
     const tokenOverrides = new Map<number, string>();
     const programStatementTokens = new Set<number>();
+    const expandedArrays = new Set<number>();
     const arrayRanges: Array<{ open: number; close: number; elements: Node[] }> = [];
     const callRanges: Array<{
       start: number;
@@ -169,14 +171,15 @@ export class JavaScriptFormatter implements FormatterEngine {
       close: number,
       items: Node[],
       expand: boolean,
+      itemExtra = 1,
     ): void => {
       if (!expand || close <= open + 1) return;
       const firstItem = items[0]?.start != null ? locate(tokens, items[0].start) : undefined;
-      forcedBreak.set(firstItem ?? open + 1, 1);
+      forcedBreak.set(firstItem ?? open + 1, itemExtra);
       for (const item of items.slice(1)) {
         if (item.start == null) continue;
         const itemToken = locate(tokens, item.start);
-        if (itemToken !== undefined) forcedBreak.set(itemToken, 1);
+        if (itemToken !== undefined) forcedBreak.set(itemToken, itemExtra);
       }
       forcedBreak.set(close, 0);
     };
@@ -185,6 +188,7 @@ export class JavaScriptFormatter implements FormatterEngine {
       multilineObjects.add(open);
       forcedBreak.set(open + 1, 0);
       forcedBreak.set(close, 0);
+      for (const propertyToken of objectPropertyTokens.get(open) ?? []) forcedBreak.set(propertyToken, 0);
       let nestedDepth = 0;
       for (let index = open + 1; index < close; index++) {
         if (["(", "[", "{", "${"].some((text) => tokenIs(index, text))) nestedDepth++;
@@ -488,6 +492,12 @@ export class JavaScriptFormatter implements FormatterEngine {
         const open = locate(tokens, node.start);
         const close = locate(tokens, node.end, true);
         if (open === undefined || open < 0 || close === undefined || close < 0 || close <= open + 1) return;
+        const properties = Array.isArray(node.properties) ? node.properties as Node[] : [];
+        objectPropertyTokens.set(open, properties.flatMap((property) => {
+          if (property.start == null) return [];
+          const tokenIndex = locate(tokens, property.start);
+          return tokenIndex === undefined || tokenIndex < 0 ? [] : [tokenIndex];
+        }));
         const wasMultiline = containsLineBreak(normalized.slice(node.start, node.end));
         if (!compactArgumentObjectTrees.has(node) && (!directArgumentObjects.has(node) || wasMultiline)) {
           forceMultilineObject(open, close);
@@ -518,7 +528,8 @@ export class JavaScriptFormatter implements FormatterEngine {
         const close = locate(tokens, node.end, true);
         const elements = Array.isArray(node.elements) ? (node.elements as Array<Node | null>).filter((item): item is Node => item !== null) : [];
         if (open !== undefined && close !== undefined && containsLineBreak(normalized.slice(node.start, node.end))) {
-          formatMultilineDelimitedList(open, close, elements, true);
+          expandedArrays.add(open);
+          formatMultilineDelimitedList(open, close, elements, true, 0);
         }
         if (open !== undefined && close !== undefined) arrayRanges.push({ open, close, elements });
       }
@@ -528,6 +539,14 @@ export class JavaScriptFormatter implements FormatterEngine {
           if (branch?.start == null) continue;
           const branchToken = locate(tokens, branch.start);
           if (branchToken !== undefined && breakWasAuthoredBefore(branchToken)) forcedBreak.set(branchToken, 1);
+        }
+      }
+
+      if (node.type === "ArrowFunctionExpression") {
+        const body = node.body as Node | undefined;
+        if (body?.start != null) {
+          const bodyToken = locate(tokens, body.start);
+          if (bodyToken !== undefined && breakWasAuthoredBefore(bodyToken)) forcedBreak.set(bodyToken, 1);
         }
       }
 
@@ -588,7 +607,10 @@ export class JavaScriptFormatter implements FormatterEngine {
       (left.close - left.open) - (right.close - right.open)
     )) {
       const containsForcedBreak = [...forcedBreak.keys()].some((tokenIndex) => tokenIndex > open && tokenIndex < close);
-      if (containsForcedBreak) formatMultilineDelimitedList(open, close, elements, true);
+      if (containsForcedBreak) {
+        expandedArrays.add(open);
+        formatMultilineDelimitedList(open, close, elements, true, 0);
+      }
     }
 
     // Universal typography rules operate only on trivia between parser tokens.
@@ -700,28 +722,34 @@ export class JavaScriptFormatter implements FormatterEngine {
       if (tokenIs(index, "(") || tokenIs(index, "[")) delimiters++;
     }
 
-    // Program statements and standalone top-level comments have no containing
-    // indentation. Normalize their line-leading trivia instead of preserving
-    // padding inherited from the input. Delimiter depth excludes comments in
-    // multiline calls and arrays, whose continuation layout is handled below.
+    const arrayContinuationDepth = (tokenIndex: number): number => arrayRanges.filter((range) =>
+      expandedArrays.has(range.open) && range.open < tokenIndex && tokenIndex < range.close
+    ).length;
+
+    // Program statements and standalone comments use computed indentation
+    // instead of padding inherited from the input. Comments nested in objects
+    // include surrounding array continuation depth, while comments that occur
+    // directly inside calls retain their authored continuation layout.
     let leadingTrivia = normalized.slice(0, tokens[0].start);
-    const normalizeTopLevelIndent = (value: string): string => {
-      if (/^[\t ]*$/.test(value)) return "";
-      return containsLineBreak(value) ? value.replace(/[\t ]*$/, "") : value;
+    const normalizeLineIndent = (value: string, indent: string): string => {
+      if (/^[\t ]*$/.test(value)) return indent;
+      return containsLineBreak(value) ? value.replace(/[\t ]*$/, indent) : value;
     };
     for (let index = 0; index < tokens.length; index++) {
-      const standaloneComment = isComment(tokens[index]) && braceDepth[index] === 0 && delimiterDepth[index] === 0;
-      if (!programStatementTokens.has(index) && !standaloneComment) continue;
-      if (index === 0) leadingTrivia = normalizeTopLevelIndent(leadingTrivia);
-      else gaps[index - 1] = normalizeTopLevelIndent(gaps[index - 1]);
-      if (standaloneComment && containsLineBreak(tokenText(index))) {
+      const indentableComment = isComment(tokens[index]) && (braceDepth[index] > 0 || delimiterDepth[index] === 0);
+      if (!programStatementTokens.has(index) && !indentableComment) continue;
+      const depth = programStatementTokens.has(index) ? 0 : braceDepth[index] + arrayContinuationDepth(index);
+      const indent = options.indent.repeat(depth);
+      if (index === 0) leadingTrivia = normalizeLineIndent(leadingTrivia, indent);
+      else gaps[index - 1] = normalizeLineIndent(gaps[index - 1], indent);
+      if (indentableComment && containsLineBreak(tokenText(index))) {
         const lineStart = normalized.lastIndexOf("\n", tokens[index].start - 1) + 1;
         const baseline = normalized.slice(lineStart, tokens[index].start);
         if (/^[\t ]+$/.test(baseline)) {
           const lines = tokenText(index).split("\n");
           tokenOverrides.set(index, [
             lines[0],
-            ...lines.slice(1).map((line) => line.startsWith(baseline) ? line.slice(baseline.length) : line),
+            ...lines.slice(1).map((line) => indent + (line.startsWith(baseline) ? line.slice(baseline.length) : line)),
           ].join("\n"));
         }
       }
@@ -747,12 +775,12 @@ export class JavaScriptFormatter implements FormatterEngine {
 
     for (const [tokenIndex, extra] of forcedBreak) {
       if (tokenIndex <= 0) continue;
-      const indentDepth = Math.max(0, braceDepth[tokenIndex] + extra - (normalized.slice(tokens[tokenIndex].start, tokens[tokenIndex].end) === "}" ? 0 : 0));
+      const indentDepth = Math.max(0, braceDepth[tokenIndex] + arrayContinuationDepth(tokenIndex) + extra);
       gaps[tokenIndex - 1] = `\n${options.indent.repeat(indentDepth)}`;
     }
     for (const [tokenIndex, extra] of forcedBlank) {
       if (tokenIndex <= 0) continue;
-      const indentDepth = Math.max(0, braceDepth[tokenIndex] + extra);
+      const indentDepth = Math.max(0, braceDepth[tokenIndex] + arrayContinuationDepth(tokenIndex) + extra);
       gaps[tokenIndex - 1] = `\n\n${options.indent.repeat(indentDepth)}`;
     }
 

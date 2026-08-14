@@ -384,6 +384,36 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(format(output, { language: "typescript" })).toBe(output);
   });
 
+  it("carries array continuation depth into nested argument objects and comments", () => {
+    const input = [
+      "export default defineConfig({",
+      "plugins:[",
+      "enhancedImages(),",
+      "sveltekit({",
+      "version:{name:child_process.execSync('git rev-parse HEAD').toString().trim()},",
+      "compilerOptions:{",
+      "// Force runes mode for the project.",
+      "runes:( { filename } ) =>",
+      "filename.split(/[/\\\\]/).includes('node_modules')?undefined:true,",
+      "experimental:{async:true}",
+      "},",
+      "// Use the Cloudflare adapter.",
+      "adapter:adapter()",
+      "})",
+      "]",
+      "});",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript", indent: "  " });
+
+    expect(output).toContain("  plugins: [\n    enhancedImages(),\n    sveltekit( {");
+    expect(output).toContain("\n      version: {\n        name: child_process.execSync( 'git rev-parse HEAD' ).toString().trim()\n      },");
+    expect(output).toContain("\n      compilerOptions: {\n        // Force runes mode for the project.\n        runes: ( { filename } ) =>\n          filename.split(");
+    expect(output).toContain("\n      // Use the Cloudflare adapter.\n      adapter: adapter()\n    } )\n  ]\n} );");
+    expect(format(output, { language: "typescript", indent: "  " })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
   it("preserves the syntax node following themis-ignore", () => {
     const input = [
       "const before=ready;",

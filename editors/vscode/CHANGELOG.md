@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1 - 2026-08-14
+
+- Normalize first-statement and standalone-comment indentation in JavaScript, TypeScript, and embedded Svelte scripts.
+- Preserve multiline comment content while applying the configured indentation baseline.
+
 ## 0.4.0 - 2026-08-13
 
 - Format Svelte markup expressions, attributes, directives, special tags, and control blocks with stable AST-aware indentation.

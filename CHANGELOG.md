@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.1 - 2026-08-14
+
+- Normalize leading indentation for the first top-level statement and standalone comments instead of preserving padding inherited from the input.
+- Re-indent multiline comment continuation lines to the configured baseline while preserving their internal content.
+- Add direct JavaScript/TypeScript and embedded Svelte regressions for mixed source indentation, configured indentation, syntax validity, and idempotence.
+
 ## 0.4.0 - 2026-08-13
 
 - Format Svelte markup expressions, expression attributes, spreads, directives, block conditions, and snippet parameters from Svelte compiler AST ranges.

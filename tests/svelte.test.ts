@@ -257,6 +257,27 @@ describe("Svelte formatter", () => {
     expect(format(output, { language: "svelte" })).toBe(output);
   });
 
+  it("does not borrow a parent closing tag for an implicitly closed SVG", () => {
+    const input = [
+      '<a href="https://example.com" aria-label="Example">',
+      "<svg",
+      'viewBox="0 0 10 10"',
+      'xmlns="http://www.w3.org/2000/svg"',
+      ">",
+      '<path d="m0 0h10v10z"></path>',
+      "",
+      "",
+      "</a>",
+      "",
+    ].join("\n");
+
+    const output = format(input, { language: "svelte", indent: "  " });
+    expect(output).toContain('    <path d="m0 0h10v10z"></path>\n</a>');
+    expect(output).not.toContain("\n\n\n");
+    expect(() => parse(output, { modern: true })).not.toThrow();
+    expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
+  });
+
   it("uses TypeScript syntax when formatting markup expressions", () => {
     const input = '<script lang="ts">type Item={value:number};let item:Item;</script>\n<p data-value={item satisfies Item}>{item.value as number}</p>\n';
     const output = format(input, { language: "svelte" });

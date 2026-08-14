@@ -110,8 +110,15 @@ function openingTagEnd(source: string, node: Node, attributes: Node[]): number {
 
 function closingTagStart(source: string, node: Node, openingEnd: number): number | undefined {
   if (node.end === undefined || source.slice(node.start, openingEnd).trimEnd().endsWith("/>")) return undefined;
-  const position = source.lastIndexOf("</", node.end);
-  return position >= openingEnd ? position : undefined;
+  const openingName = typeof node.name === "string"
+    ? node.name
+    : source.slice(node.start, openingEnd).match(/^<([^\s/>]+)/)?.[1];
+  if (!openingName) return undefined;
+  const marker = `</${openingName}`;
+  const position = source.lastIndexOf(marker, node.end);
+  if (position < openingEnd) return undefined;
+  const suffix = source.slice(position + marker.length, node.end);
+  return /^\s*>/.test(suffix) ? position : undefined;
 }
 
 function formatExpression(
@@ -226,6 +233,7 @@ export class SvelteFormatter implements FormatterEngine {
       end: number,
       parentDepth: number,
       force: boolean,
+      collapseTrailing = false,
     ): void => {
       if (!fragment || !force || end < start) return;
       const nodes = fragment.nodes.filter((node) => !whitespaceOnly(node, normalized));
@@ -252,7 +260,9 @@ export class SvelteFormatter implements FormatterEngine {
         }
       }
       const lastEnd = contentEnd(nodes[nodes.length - 1]);
-      replace(lastEnd, end, structuralWhitespace(normalized.slice(lastEnd, end), parentIndent));
+      replace(lastEnd, end, collapseTrailing
+        ? ""
+        : structuralWhitespace(normalized.slice(lastEnd, end), parentIndent));
     };
 
     const visitFragment = (fragment: Fragment | undefined, depth: number): void => {
@@ -417,10 +427,12 @@ export class SvelteFormatter implements FormatterEngine {
 
         const fragment = node.fragment as Fragment | undefined;
         const closeStart = closingTagStart(normalized, node, openingEnd);
-        if (fragment && closeStart !== undefined) {
+        const fragmentBoundary = closeStart ?? node.end;
+        if (fragment && fragmentBoundary > openingEnd) {
           const structuralChild = fragmentWillBeMultiline(fragment, depth + 1);
-          const authoredMultiline = normalized.slice(openingEnd, closeStart).includes("\n");
-          normalizeFragment(fragment, openingEnd, closeStart, depth, structuralChild || authoredMultiline);
+          const authoredMultiline = normalized.slice(openingEnd, fragmentBoundary).includes("\n");
+          normalizeFragment(fragment, openingEnd, fragmentBoundary, depth,
+            structuralChild || authoredMultiline, closeStart === undefined);
           visitFragment(fragment, depth + 1);
         }
         return;

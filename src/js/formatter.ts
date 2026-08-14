@@ -149,6 +149,7 @@ export class JavaScriptFormatter implements FormatterEngine {
     const multilineParenthesizedRanges: SourceRange[] = [];
     const jsxDelimiterTokens = new Set<number>();
     const tokenOverrides = new Map<number, string>();
+    const programStatementTokens = new Set<number>();
     const arrayRanges: Array<{ open: number; close: number; elements: Node[] }> = [];
     const callRanges: Array<{
       start: number;
@@ -550,6 +551,11 @@ export class JavaScriptFormatter implements FormatterEngine {
 
       if (node.type === "Program") {
         const body = Array.isArray(node.body) ? node.body as Node[] : [];
+        for (const statement of body) {
+          if (statement.start == null) continue;
+          const tokenIndex = locate(tokens, statement.start);
+          if (tokenIndex !== undefined && tokenIndex >= 0) programStatementTokens.add(tokenIndex);
+        }
         for (let index = 1; index < body.length; index++) {
           const current = body[index];
           if (current.start == null) continue;
@@ -673,14 +679,46 @@ export class JavaScriptFormatter implements FormatterEngine {
 
     // Compute lexical brace depth for indentation introduced by this formatter.
     const braceDepth: number[] = [];
+    const delimiterDepth: number[] = [];
     let braces = 0;
+    let delimiters = 0;
     for (let index = 0; index < tokens.length; index++) {
       if (tokenIs(index, "}")) braces = Math.max(0, braces - 1);
+      if (tokenIs(index, ")") || tokenIs(index, "]")) delimiters = Math.max(0, delimiters - 1);
       braceDepth[index] = braces;
+      delimiterDepth[index] = delimiters;
       // Babel tokenizes a template interpolation as `${` ... `}`. Treat its
       // opening token as a brace so the closing `}` cannot accidentally reduce
       // the surrounding block's indentation depth.
       if (tokenIs(index, "{") || tokenIs(index, "${")) braces++;
+      if (tokenIs(index, "(") || tokenIs(index, "[")) delimiters++;
+    }
+
+    // Program statements and standalone top-level comments have no containing
+    // indentation. Normalize their line-leading trivia instead of preserving
+    // padding inherited from the input. Delimiter depth excludes comments in
+    // multiline calls and arrays, whose continuation layout is handled below.
+    let leadingTrivia = normalized.slice(0, tokens[0].start);
+    const normalizeTopLevelIndent = (value: string): string => {
+      if (/^[\t ]*$/.test(value)) return "";
+      return containsLineBreak(value) ? value.replace(/[\t ]*$/, "") : value;
+    };
+    for (let index = 0; index < tokens.length; index++) {
+      const standaloneComment = isComment(tokens[index]) && braceDepth[index] === 0 && delimiterDepth[index] === 0;
+      if (!programStatementTokens.has(index) && !standaloneComment) continue;
+      if (index === 0) leadingTrivia = normalizeTopLevelIndent(leadingTrivia);
+      else gaps[index - 1] = normalizeTopLevelIndent(gaps[index - 1]);
+      if (standaloneComment && containsLineBreak(tokenText(index))) {
+        const lineStart = normalized.lastIndexOf("\n", tokens[index].start - 1) + 1;
+        const baseline = normalized.slice(lineStart, tokens[index].start);
+        if (/^[\t ]+$/.test(baseline)) {
+          const lines = tokenText(index).split("\n");
+          tokenOverrides.set(index, [
+            lines[0],
+            ...lines.slice(1).map((line) => line.startsWith(baseline) ? line.slice(baseline.length) : line),
+          ].join("\n"));
+        }
+      }
     }
 
     // JSX line-edge whitespace is layout rather than authored content. Normalize
@@ -724,7 +762,7 @@ export class JavaScriptFormatter implements FormatterEngine {
       }
     }
 
-    let result = normalized.slice(0, tokens[0].start) + (tokenOverrides.get(0) ?? normalized.slice(tokens[0].start, tokens[0].end));
+    let result = leadingTrivia + (tokenOverrides.get(0) ?? normalized.slice(tokens[0].start, tokens[0].end));
     for (let index = 1; index < tokens.length; index++) {
       result += gaps[index - 1] + (tokenOverrides.get(index) ?? normalized.slice(tokens[index].start, tokens[index].end));
     }

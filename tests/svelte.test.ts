@@ -281,6 +281,38 @@ describe("Svelte formatter", () => {
     );
   });
 
+  it("normalizes top-level script indentation and standalone comments", () => {
+    const input = [
+      '<script lang="ts">',
+      '    import type { LayoutProps } from "./$types";',
+      "",
+      "  import { beforeNavigate } from '$app/navigation';",
+      "",
+      "    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/",
+      "    / Component Imports",
+      "    /~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/",
+      "",
+      "  let { children, data }: LayoutProps = $props();",
+      "",
+      "  beforeNavigate( ( { willUnload } ) => {",
+      "    if( willUnload ) {",
+      "      void children;",
+      "    }",
+      "  } );",
+      "</script>",
+      "",
+    ].join("\n");
+
+    const output = format(input, { language: "svelte", indent: "  " });
+    expect(output).toContain('  import type { LayoutProps } from "./$types";');
+    expect(output).toContain("\n  import { beforeNavigate } from '$app/navigation';");
+    expect(output).toContain("\n  /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/\n  / Component Imports\n  /~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/");
+    expect(output).toContain("\n  let { children, data }: LayoutProps = $props();");
+    expect(output).toContain("\n  beforeNavigate( ( { willUnload } ) => {\n    if( willUnload ) {\n      void children;\n    }\n  } );");
+    expect(() => parse(output, { modern: true })).not.toThrow();
+    expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
+  });
+
   it("leaves explicitly unsupported script languages untouched", () => {
     const input = "<script lang=\"coffee\">const   x=1</script>\n<div>{x}</div>\n";
     expect(format(input, { language: "svelte" })).toBe(input);

@@ -326,6 +326,36 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
   });
 
+  it("normalizes leading indentation for program statements and standalone comments", () => {
+    const input = [
+      "    const first=1;",
+      "",
+      "  /* section",
+      "   * detail",
+      "   */",
+      "  const second=()=>{",
+      "      return first;",
+      "  };",
+      "",
+    ].join("\n");
+    const expected = [
+      "const first = 1;",
+      "",
+      "/* section",
+      " * detail",
+      " */",
+      "",
+      "const second = () => {",
+      "  return first;",
+      "};",
+      "",
+    ].join("\n");
+
+    const output = format(input, { language: "typescript", indent: "  " });
+    expect(output).toBe(expected);
+    expect(format(output, { language: "typescript", indent: "  " })).toBe(output);
+  });
+
   it("preserves the syntax node following themis-ignore", () => {
     const input = [
       "const before=ready;",

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2 - 2026-08-14
+
+- Preserve authored import grouping instead of inserting a blank line between every import.
+- Fix indentation for comments, objects, properties, and arrow bodies nested inside multiline arrays and function arguments.
+
 ## 0.4.1 - 2026-08-14
 
 - Normalize first-statement and standalone-comment indentation in JavaScript, TypeScript, and embedded Svelte scripts.

@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.2 - 2026-08-14
+
+- Preserve consecutive imports without inserting blank lines while retaining authored import groups and attached comments.
+- Carry multiline-array continuation depth through nested function arguments, objects, properties, comments, and arrow-function bodies.
+- Add syntax-validity and idempotence regressions for nested Vite and SvelteKit configuration structures.
+
 ## 0.4.1 - 2026-08-14
 
 - Normalize leading indentation for the first top-level statement and standalone comments instead of preserving padding inherited from the input.

@@ -557,10 +557,16 @@ export class JavaScriptFormatter implements FormatterEngine {
           if (tokenIndex !== undefined && tokenIndex >= 0) programStatementTokens.add(tokenIndex);
         }
         for (let index = 1; index < body.length; index++) {
+          const previous = body[index - 1];
           const current = body[index];
           if (current.start == null) continue;
           const tokenIndex = locate(tokens, current.start);
           if (tokenIndex === undefined || tokenIndex < 0) continue;
+          if (previous.type === "ImportDeclaration" && current.type === "ImportDeclaration") {
+            const authoredBlank = (originalGaps[tokenIndex - 1]?.match(/\n/g) ?? []).length > 1;
+            (authoredBlank ? forcedBlank : forcedBreak).set(tokenIndex, 0);
+            continue;
+          }
           const structural = CONTROL_TYPES.has(current.type) || /(?:Declaration|Statement)$/.test(current.type);
           (structural ? forcedBlank : forcedBreak).set(tokenIndex, 0);
         }

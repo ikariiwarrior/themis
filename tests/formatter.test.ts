@@ -356,6 +356,34 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(format(output, { language: "typescript", indent: "  " })).toBe(output);
   });
 
+  it("keeps related imports together and preserves authored import groups", () => {
+    const input = [
+      "import * as childProcess from 'node:child_process';",
+      "import { sveltekit } from '@sveltejs/kit/vite';",
+      "",
+      "import { enhancedImages } from '@sveltejs/enhanced-img';",
+      "// import adapter from '@sveltejs/adapter-auto';",
+      "import adapter from '@sveltejs/adapter-cloudflare';",
+      "const config=defineConfig({});",
+      "",
+    ].join("\n");
+    const expected = [
+      "import * as childProcess from 'node:child_process';",
+      "import { sveltekit } from '@sveltejs/kit/vite';",
+      "",
+      "import { enhancedImages } from '@sveltejs/enhanced-img';",
+      "// import adapter from '@sveltejs/adapter-auto';",
+      "import adapter from '@sveltejs/adapter-cloudflare';",
+      "",
+      "const config = defineConfig( {} );",
+      "",
+    ].join("\n");
+
+    const output = format(input, { language: "typescript" });
+    expect(output).toBe(expected);
+    expect(format(output, { language: "typescript" })).toBe(output);
+  });
+
   it("preserves the syntax node following themis-ignore", () => {
     const input = [
       "const before=ready;",

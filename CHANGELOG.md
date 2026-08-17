@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.5 - 2026-08-17
+
+- Keep JSDoc and other documentation comments directly attached to the declarations they document.
+- Preserve section spacing before an intervening comment without incorrectly moving or duplicating that spacing after the comment.
+- Add comment-attachment syntax-validity and idempotence regressions for exported TypeScript declarations and ordinary section comments.
+
 ## 0.4.4 - 2026-08-17
 
 - Preserve authored blank-line groups between all JavaScript and TypeScript statements instead of forcing separation based on broad declaration or statement categories.

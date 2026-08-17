@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.5 - 2026-08-17
+
+- Keep JSDoc and ordinary comments attached to the code they document instead of moving preceding section spacing below the comment.
+
 ## 0.4.4 - 2026-08-17
 
 - Preserve authored JavaScript and TypeScript statement grouping instead of inserting automatic blank lines between exports and other declaration kinds.

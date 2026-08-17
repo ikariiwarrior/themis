@@ -165,11 +165,8 @@ export class JavaScriptFormatter implements FormatterEngine {
     const tokenText = (index: number): string => normalized.slice(tokens[index].start, tokens[index].end);
     const tokenIs = (index: number, text: string): boolean => label(tokens[index], normalized) === text;
     const breakWasAuthoredBefore = (index: number): boolean => index > 0 && containsLineBreak(originalGaps[index - 1] ?? "");
-    const blankWasAuthoredBetween = (previous: Node, currentToken: number): boolean => {
-      const previousToken = previous.end == null ? undefined : locate(tokens, previous.end, true);
-      return previousToken !== undefined
-        && originalGaps.slice(previousToken, currentToken).some((gap) => (gap.match(/\n/g) ?? []).length > 1);
-    };
+    const blankWasAuthoredBefore = (currentToken: number): boolean =>
+      currentToken > 0 && (originalGaps[currentToken - 1]?.match(/\n/g) ?? []).length > 1;
 
     const formatMultilineDelimitedList = (
       open: number,
@@ -465,13 +462,12 @@ export class JavaScriptFormatter implements FormatterEngine {
 
         const body = Array.isArray(node.body) ? node.body as Node[] : [];
         for (let index = 1; index < body.length; index++) {
-          const previous = body[index - 1];
           const statement = body[index];
           if (statement.start == null) continue;
           const tokenIndex = locate(tokens, statement.start);
           if (tokenIndex === undefined || tokenIndex < 0) continue;
           const isConcludingReturn = statement.type === "ReturnStatement" && index === body.length - 1;
-          const preserveAuthoredBlank = blankWasAuthoredBetween(previous, tokenIndex);
+          const preserveAuthoredBlank = blankWasAuthoredBefore(tokenIndex);
           (isConcludingReturn || preserveAuthoredBlank ? forcedBlank : forcedBreak).set(tokenIndex, 0);
         }
       }
@@ -583,12 +579,11 @@ export class JavaScriptFormatter implements FormatterEngine {
           if (tokenIndex !== undefined && tokenIndex >= 0) programStatementTokens.add(tokenIndex);
         }
         for (let index = 1; index < body.length; index++) {
-          const previous = body[index - 1];
           const current = body[index];
           if (current.start == null) continue;
           const tokenIndex = locate(tokens, current.start);
           if (tokenIndex === undefined || tokenIndex < 0) continue;
-          (blankWasAuthoredBetween(previous, tokenIndex) ? forcedBlank : forcedBreak).set(tokenIndex, 0);
+          (blankWasAuthoredBefore(tokenIndex) ? forcedBlank : forcedBreak).set(tokenIndex, 0);
         }
       }
     });

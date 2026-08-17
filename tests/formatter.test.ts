@@ -344,7 +344,6 @@ describe("JavaScript/TypeScript formatter", () => {
       "/* section",
       " * detail",
       " */",
-      "",
       "const second = () => {",
       "  return first;",
       "};",
@@ -458,6 +457,42 @@ describe("JavaScript/TypeScript formatter", () => {
 
     const output = format(input, { language: "typescript" });
     expect(output).toBe(expected);
+    expect(format(output, { language: "typescript" })).toBe(output);
+  });
+
+  it("keeps documentation comments attached to the declarations they document", () => {
+    const input = [
+      "import { getRequestEvent } from '$app/server';",
+      "",
+      "/**",
+      " * Sets the customer authentication cookies.",
+      " * @param token - The bearer token returned by the API.",
+      " */",
+      "export function setAuthCookies(token:string):void{",
+      "getRequestEvent().cookies.set('__c_token',token,{path:'/'});",
+      "}",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript", indent: "  " });
+
+    expect(output).toContain("from '$app/server';\n\n/**");
+    expect(output).toContain(" * @param token - The bearer token returned by the API.\n */\nexport function setAuthCookies");
+    expect(output).not.toContain(" */\n\nexport function setAuthCookies");
+    expect(format(output, { language: "typescript", indent: "  " })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
+  it("keeps authored section spacing before comments instead of moving it after them", () => {
+    const input = [
+      "const first=1;",
+      "",
+      "// Related setup",
+      "const second=2;",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript" });
+
+    expect(output).toBe("const first = 1;\n\n// Related setup\nconst second = 2;\n");
     expect(format(output, { language: "typescript" })).toBe(output);
   });
 

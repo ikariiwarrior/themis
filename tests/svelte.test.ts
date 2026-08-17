@@ -334,6 +334,34 @@ describe("Svelte formatter", () => {
     expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
   });
 
+  it("keeps related state and constant declarations grouped in scripts", () => {
+    const input = [
+      '<script lang="ts">',
+      'let inputValue=$state("");',
+      "let isComposing=$state(false);",
+      "let activeIndex=$state(-1);",
+      "let open=$state(false);",
+      "",
+      "const listboxId=$derived(inputId?`${inputId}-listbox`:`search-listbox`);",
+      "const MAX_SUGGESTIONS=8;",
+      "</script>",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "svelte", indent: "  " });
+
+    expect(output).toContain([
+      '  let inputValue = $state( "" );',
+      "  let isComposing = $state( false );",
+      "  let activeIndex = $state( - 1 );",
+      "  let open = $state( false );",
+      "",
+      "  const listboxId = $derived( inputId ? `${inputId}-listbox` : `search-listbox` );",
+      "  const MAX_SUGGESTIONS = 8;",
+    ].join("\n"));
+    expect(() => parse(output, { modern: true })).not.toThrow();
+    expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
+  });
+
   it("leaves explicitly unsupported script languages untouched", () => {
     const input = "<script lang=\"coffee\">const   x=1</script>\n<div>{x}</div>\n";
     expect(format(input, { language: "svelte" })).toBe(input);

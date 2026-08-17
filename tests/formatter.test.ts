@@ -98,7 +98,7 @@ describe("JavaScript/TypeScript formatter", () => {
 
   it("spaces non-empty square brackets without changing empty brackets", () => {
     expect(format("const first=values[0];const list=[1,2];const empty=[];\n", { language: "typescript" })).toBe(
-      "const first = values[ 0 ];\n\nconst list = [ 1, 2 ];\n\nconst empty = [];\n",
+      "const first = values[ 0 ];\nconst list = [ 1, 2 ];\nconst empty = [];\n",
     );
   });
 
@@ -382,6 +382,33 @@ describe("JavaScript/TypeScript formatter", () => {
     const output = format(input, { language: "typescript" });
     expect(output).toBe(expected);
     expect(format(output, { language: "typescript" })).toBe(output);
+  });
+
+  it("keeps related variable declarations together and preserves authored groups", () => {
+    const input = [
+      'let inputValue=$state("");',
+      "let isComposing=$state(false);",
+      "let activeIndex=$state(-1);",
+      "let open=$state(false);",
+      "",
+      "const listboxId=$derived(inputId?`${inputId}-listbox`:`search-listbox`);",
+      "const MAX_SUGGESTIONS=8;",
+      "",
+    ].join("\n");
+    const expected = [
+      'let inputValue = $state( "" );',
+      "let isComposing = $state( false );",
+      "let activeIndex = $state( - 1 );",
+      "let open = $state( false );",
+      "",
+      "const listboxId = $derived( inputId ? `${inputId}-listbox` : `search-listbox` );",
+      "const MAX_SUGGESTIONS = 8;",
+      "",
+    ].join("\n");
+
+    const output = format(input, { language: "typescript", indent: "  " });
+    expect(output).toBe(expected);
+    expect(format(output, { language: "typescript", indent: "  " })).toBe(output);
   });
 
   it("carries array continuation depth into nested argument objects and comments", () => {

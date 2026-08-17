@@ -581,8 +581,12 @@ export class JavaScriptFormatter implements FormatterEngine {
           if (current.start == null) continue;
           const tokenIndex = locate(tokens, current.start);
           if (tokenIndex === undefined || tokenIndex < 0) continue;
-          if (previous.type === "ImportDeclaration" && current.type === "ImportDeclaration") {
-            const authoredBlank = (originalGaps[tokenIndex - 1]?.match(/\n/g) ?? []).length > 1;
+          const groupedDeclarations = previous.type === current.type
+            && (current.type === "ImportDeclaration" || current.type === "VariableDeclaration");
+          if (groupedDeclarations) {
+            const previousToken = previous.end == null ? undefined : locate(tokens, previous.end, true);
+            const authoredBlank = previousToken !== undefined
+              && originalGaps.slice(previousToken, tokenIndex).some((gap) => (gap.match(/\n/g) ?? []).length > 1);
             (authoredBlank ? forcedBlank : forcedBreak).set(tokenIndex, 0);
             continue;
           }

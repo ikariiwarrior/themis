@@ -12,7 +12,6 @@
             value: 1
         }
     };
-
     function increment() {
         count += 1;
 

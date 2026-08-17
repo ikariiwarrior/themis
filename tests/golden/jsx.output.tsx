@@ -2,7 +2,6 @@ interface CardProps {
     title: string;
     count: number;
 }
-
 const compact = <Badge tone={active ? 'success' : 'neutral'}>Keep   exact</Badge>;
 const card = <Card title={title} count={items.length} disabled={false} />;
 const dashboard = <Dashboard

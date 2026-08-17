@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.4 - 2026-08-17
+
+- Preserve authored blank-line groups between all JavaScript and TypeScript statements instead of forcing separation based on broad declaration or statement categories.
+- Keep consecutive exports, imports, variables, functions, control flow, and expression statements together when the author did not separate them.
+- Reserve automatic blank-line insertion for a concluding `return` statement and apply the same behavior inside Svelte scripts.
+
 ## 0.4.3 - 2026-08-17
 
 - Keep consecutive variable declarations together while preserving authored blank-line groups and comment-separated sections.

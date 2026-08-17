@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.4 - 2026-08-17
+
+- Preserve authored JavaScript and TypeScript statement grouping instead of inserting automatic blank lines between exports and other declaration kinds.
+- Reserve automatic blank-line insertion for a concluding `return` statement, including in embedded Svelte scripts.
+
 ## 0.4.3 - 2026-08-17
 
 - Keep related state and constant declarations grouped according to authored blank lines.

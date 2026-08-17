@@ -154,7 +154,7 @@ describe("JavaScript/TypeScript formatter", () => {
     const input = "import{foo,type Bar as Baz}from'pkg';\nexport{foo as renamed,type Baz}from'pkg';\n";
     const output = format(input, { language: "typescript" });
     expect(output).toBe(
-      "import { foo, type Bar as Baz } from 'pkg';\n\n" +
+      "import { foo, type Bar as Baz } from 'pkg';\n" +
       "export { foo as renamed, type Baz } from 'pkg';\n",
     );
     expect(format(output, { language: "typescript" })).toBe(output);
@@ -374,7 +374,6 @@ describe("JavaScript/TypeScript formatter", () => {
       "import { enhancedImages } from '@sveltejs/enhanced-img';",
       "// import adapter from '@sveltejs/adapter-auto';",
       "import adapter from '@sveltejs/adapter-cloudflare';",
-      "",
       "const config = defineConfig( {} );",
       "",
     ].join("\n");
@@ -409,6 +408,57 @@ describe("JavaScript/TypeScript formatter", () => {
     const output = format(input, { language: "typescript", indent: "  " });
     expect(output).toBe(expected);
     expect(format(output, { language: "typescript", indent: "  " })).toBe(output);
+  });
+
+  it("keeps exports and other top-level statements together unless the author separates them", () => {
+    const input = [
+      "export * as Types from '#subplot/types/logging.js';",
+      "export * as Service from './logging.service.js';",
+      "type LogLevel='info'|'error';",
+      "const defaultLevel:LogLevel='info';",
+      "configure(defaultLevel);",
+      "",
+      "export const configured=true;",
+      "",
+    ].join("\n");
+    const expected = [
+      "export * as Types from '#subplot/types/logging.js';",
+      "export * as Service from './logging.service.js';",
+      "type LogLevel = 'info' | 'error';",
+      "const defaultLevel: LogLevel = 'info';",
+      "configure( defaultLevel );",
+      "",
+      "export const configured = true;",
+      "",
+    ].join("\n");
+
+    const output = format(input, { language: "typescript" });
+    expect(output).toBe(expected);
+    expect(format(output, { language: "typescript" })).toBe(output);
+  });
+
+  it("only introduces a blank line automatically before a concluding return", () => {
+    const input = [
+      "function resolve(value:string){",
+      "const normalized=value.trim();",
+      "log(normalized);",
+      "return normalized;",
+      "}",
+      "",
+    ].join("\n");
+    const expected = [
+      "function resolve( value: string ) {",
+      "    const normalized = value.trim();",
+      "    log( normalized );",
+      "",
+      "    return normalized;",
+      "}",
+      "",
+    ].join("\n");
+
+    const output = format(input, { language: "typescript" });
+    expect(output).toBe(expected);
+    expect(format(output, { language: "typescript" })).toBe(output);
   });
 
   it("carries array continuation depth into nested argument objects and comments", () => {

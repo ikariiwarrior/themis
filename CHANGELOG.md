@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.3 - 2026-08-17
+
+- Keep consecutive variable declarations together while preserving authored blank-line groups and comment-separated sections.
+- Match Svelte closing tags by element name so implicitly closed children cannot borrow a parent or descendant closing tag.
+- Stabilize trailing whitespace at implicit Svelte element boundaries and prevent blank-line growth across repeated formatting passes.
+
 ## 0.4.2 - 2026-08-14
 
 - Preserve consecutive imports without inserting blank lines while retaining authored import groups and attached comments.

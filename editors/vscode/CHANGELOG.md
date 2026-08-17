@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.3 - 2026-08-17
+
+- Keep related state and constant declarations grouped according to authored blank lines.
+- Prevent repeated formatting from growing whitespace around implicitly closed Svelte and SVG elements.
+
 ## 0.4.2 - 2026-08-14
 
 - Preserve authored import grouping instead of inserting a blank line between every import.

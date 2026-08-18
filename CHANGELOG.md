@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.6 - 2026-08-17
+
+- Normalize declarations and comments nested in TypeScript `declare global` and `namespace` module bodies.
+- Structurally indent nested `TSTypeLiteral` members such as optional object-shaped interface properties.
+- Keep optional interface semicolons attached as `};` and repair previously separated `}\n;` output.
+
 ## 0.4.5 - 2026-08-17
 
 - Keep JSDoc and other documentation comments directly attached to the declarations they document.

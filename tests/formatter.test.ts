@@ -496,6 +496,85 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(format(output, { language: "typescript" })).toBe(output);
   });
 
+  it("normalizes declarations nested in TypeScript namespace and global module bodies", () => {
+    const input = [
+      "interface PlatformEnv{TOKEN:string;}",
+      "declare global {",
+      "    namespace App {",
+      "      interface Platform {",
+      "      env?:PlatformEnv;",
+      "    }",
+      "        interface Error {",
+      "      errorId?:string;",
+      "      meta?:{",
+      "                route:string;",
+      "                telemetry?:unknown;",
+      "            };",
+      "    }",
+      "    // interface Locals {}",
+      "    }",
+      "    declare const __VERSION__:string;",
+      "}",
+      "export {};",
+      "",
+    ].join("\n");
+    const expected = [
+      "interface PlatformEnv {",
+      "  TOKEN: string;",
+      "}",
+      "declare global {",
+      "  namespace App {",
+      "    interface Platform {",
+      "      env?: PlatformEnv;",
+      "    }",
+      "    interface Error {",
+      "      errorId?: string;",
+      "      meta?: {",
+      "        route: string;",
+      "        telemetry?: unknown;",
+      "      };",
+      "    }",
+      "    // interface Locals {}",
+      "  }",
+      "  declare const __VERSION__: string;",
+      "}",
+      "export {};",
+      "",
+    ].join("\n");
+
+    const output = format(input, { language: "typescript", indent: "  " });
+    expect(output).toBe(expected);
+    expect(format(output, { language: "typescript", indent: "  " })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
+  it("keeps optional semicolons attached to TypeScript interface declarations", () => {
+    const input = [
+      "export interface UserInfo{",
+      "id:number;",
+      "};",
+      "export interface ApiScopedErrorDetail{",
+      "message?:string|null;",
+      "};",
+      "",
+    ].join("\n");
+    const expected = [
+      "export interface UserInfo {",
+      "  id: number;",
+      "};",
+      "export interface ApiScopedErrorDetail {",
+      "  message?: string | null;",
+      "};",
+      "",
+    ].join("\n");
+
+    const output = format(input, { language: "typescript", indent: "  " });
+    expect(output).toBe(expected);
+    expect(output).not.toContain("}\n;");
+    expect(format(output, { language: "typescript", indent: "  " })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
   it("carries array continuation depth into nested argument objects and comments", () => {
     const input = [
       "export default defineConfig({",

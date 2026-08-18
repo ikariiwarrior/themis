@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.6 - 2026-08-17
+
+- Fix indentation for declarations and object-shaped types nested in TypeScript global and namespace bodies.
+- Keep optional interface semicolons attached to their closing braces.
+
 ## 0.4.5 - 2026-08-17
 
 - Keep JSDoc and ordinary comments attached to the code they document instead of moving preceding section spacing below the comment.

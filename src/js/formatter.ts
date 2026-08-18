@@ -167,6 +167,13 @@ export class JavaScriptFormatter implements FormatterEngine {
     const breakWasAuthoredBefore = (index: number): boolean => index > 0 && containsLineBreak(originalGaps[index - 1] ?? "");
     const blankWasAuthoredBefore = (currentToken: number): boolean =>
       currentToken > 0 && (originalGaps[currentToken - 1]?.match(/\n/g) ?? []).length > 1;
+    const isInterfaceDeclaration = (node: Node): boolean => node.type === "TSInterfaceDeclaration"
+      || (node.type === "ExportNamedDeclaration" && (node.declaration as Node | undefined)?.type === "TSInterfaceDeclaration");
+    const attachInterfaceSemicolon = (previous: Node, current: Node, currentToken: number): boolean => {
+      if (current.type !== "EmptyStatement" || !isInterfaceDeclaration(previous) || !tokenIs(currentToken, ";")) return false;
+      if (currentToken > 0) gaps[currentToken - 1] = "";
+      return true;
+    };
 
     const formatMultilineDelimitedList = (
       open: number,
@@ -449,9 +456,9 @@ export class JavaScriptFormatter implements FormatterEngine {
         if ((parent.arguments as unknown[]).includes(node) && node.type === "ObjectExpression") directArgumentObjects.add(node);
       }
 
-      if (node.type === "BlockStatement" && node.start != null && node.end != null) {
+      if ((node.type === "BlockStatement" || node.type === "TSModuleBlock") && node.start != null && node.end != null) {
         const open = locate(tokens, node.start);
-        const close = locate(tokens, node.end, true);
+        const close = findToken(tokens, node.start, node.end, "}", normalized, true);
         if (open !== undefined && open >= 0 && close !== undefined && close >= 0) {
           blockBraces.set(open, close);
           if (close > open + 1) {
@@ -462,22 +469,28 @@ export class JavaScriptFormatter implements FormatterEngine {
 
         const body = Array.isArray(node.body) ? node.body as Node[] : [];
         for (let index = 1; index < body.length; index++) {
+          const previous = body[index - 1];
           const statement = body[index];
           if (statement.start == null) continue;
           const tokenIndex = locate(tokens, statement.start);
           if (tokenIndex === undefined || tokenIndex < 0) continue;
-          const isConcludingReturn = statement.type === "ReturnStatement" && index === body.length - 1;
+          if (attachInterfaceSemicolon(previous, statement, tokenIndex)) continue;
+          const isConcludingReturn = node.type === "BlockStatement"
+            && statement.type === "ReturnStatement"
+            && index === body.length - 1;
           const preserveAuthoredBlank = blankWasAuthoredBefore(tokenIndex);
           (isConcludingReturn || preserveAuthoredBlank ? forcedBlank : forcedBreak).set(tokenIndex, 0);
         }
       }
 
-      if ((node.type === "ClassBody" || node.type === "TSInterfaceBody") && node.start != null && node.end != null) {
+      if ((node.type === "ClassBody" || node.type === "TSInterfaceBody" || node.type === "TSTypeLiteral") && node.start != null && node.end != null) {
         const open = locate(tokens, node.start);
-        const close = locate(tokens, node.end, true);
+        const close = findToken(tokens, node.start, node.end, "}", normalized, true);
         if (open !== undefined && open >= 0 && close !== undefined && close >= 0) {
           blockBraces.set(open, close);
-          const body = Array.isArray(node.body) ? node.body as Node[] : [];
+          const body = Array.isArray(node.body)
+            ? node.body as Node[]
+            : Array.isArray(node.members) ? node.members as Node[] : [];
           if (close > open + 1) {
             forcedBreak.set(open + 1, 0);
             forcedBreak.set(close, 0);
@@ -583,6 +596,7 @@ export class JavaScriptFormatter implements FormatterEngine {
           if (current.start == null) continue;
           const tokenIndex = locate(tokens, current.start);
           if (tokenIndex === undefined || tokenIndex < 0) continue;
+          if (attachInterfaceSemicolon(body[index - 1], current, tokenIndex)) continue;
           (blankWasAuthoredBefore(tokenIndex) ? forcedBlank : forcedBreak).set(tokenIndex, 0);
         }
       }

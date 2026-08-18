@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.9 - 2026-08-18
+
+- Separate constructors, methods, accessors, and other executable class members with one empty line.
+- Keep consecutive class fields grouped and documentation comments attached to the members they describe.
+- Apply class-member spacing to JavaScript, TypeScript, and embedded Svelte scripts without expanding interfaces or type literals.
+
 ## 0.4.8 - 2026-08-18
 
 - Insert one empty line after an inline opening brace for TypeScript and TSX function, method, and control-flow bodies.

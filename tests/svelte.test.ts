@@ -401,6 +401,38 @@ describe("Svelte formatter", () => {
     expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
   });
 
+  it("separates executable class members in embedded TypeScript", () => {
+    const input = [
+      '<script lang="ts">',
+      "class Service{",
+      "readonly value:string;",
+      "constructor(value:string){this.value=value;}",
+      "run(){return this.value;}",
+      "}",
+      "</script>",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "svelte", indent: "  " });
+
+    expect(output).toContain([
+      "  class Service {",
+      "    readonly value: string;",
+      "",
+      "    constructor( value: string ) {",
+      "",
+      "      this.value = value;",
+      "    }",
+      "",
+      "    run() {",
+      "",
+      "      return this.value;",
+      "    }",
+      "  }",
+    ].join("\n"));
+    expect(() => parse(output, { modern: true })).not.toThrow();
+    expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
+  });
+
   it("keeps related state and constant declarations grouped in scripts", () => {
     const input = [
       '<script lang="ts">',

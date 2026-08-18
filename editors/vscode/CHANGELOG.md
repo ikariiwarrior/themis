@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.9 - 2026-08-18
+
+- Separate executable class members while keeping consecutive fields grouped.
+- Preserve documentation-comment attachment and compact interface/type-literal members.
+
 ## 0.4.8 - 2026-08-18
 
 - Add one empty line after inline TypeScript and TSX function, method, and control-flow opening braces.

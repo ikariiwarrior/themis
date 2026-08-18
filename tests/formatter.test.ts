@@ -522,6 +522,7 @@ describe("JavaScript/TypeScript formatter", () => {
       "};",
       "class Service {",
       "    value: string;",
+      "",
       "    run() {",
       "",
       "        work();",
@@ -541,6 +542,65 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(format(output, { language: "typescript" })).toBe(output);
     expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
     expect(format("if(ok){run();}\n", { language: "javascript" })).toBe("if( ok ) {\n    run();\n}\n");
+  });
+
+  it("separates executable class members while keeping consecutive fields grouped", () => {
+    const input = [
+      "export class LoggerService{",
+      "readonly #context:Types.LoggerContext;",
+      "readonly #minimumLevel:Types.LogLevel;",
+      "constructor(context:Types.LoggerContext={}){this.#context=context;}",
+      "withContext(context:Types.LoggerContext){return new LoggerService(context);}",
+      "/** Writes a debug entry. */",
+      "debug(message:string){this.write(message);}",
+      "private write(message:string){console.debug(message);}",
+      "}",
+      "interface LoggerShape{",
+      "context:Types.LoggerContext;",
+      "debug(message:string):void;",
+      "}",
+      "",
+    ].join("\n");
+    const expected = [
+      "export class LoggerService {",
+      "  readonly #context: Types.LoggerContext;",
+      "  readonly #minimumLevel: Types.LogLevel;",
+      "",
+      "  constructor( context: Types.LoggerContext = {} ) {",
+      "",
+      "    this.#context = context;",
+      "  }",
+      "",
+      "  withContext( context: Types.LoggerContext ) {",
+      "",
+      "    return new LoggerService( context );",
+      "  }",
+      "",
+      "  /** Writes a debug entry. */",
+      "  debug( message: string ) {",
+      "",
+      "    this.write( message );",
+      "  }",
+      "",
+      "  private write( message: string ) {",
+      "",
+      "    console.debug( message );",
+      "  }",
+      "}",
+      "interface LoggerShape {",
+      "  context: Types.LoggerContext;",
+      "  debug( message: string ): void;",
+      "}",
+      "",
+    ].join("\n");
+
+    const output = format(input, { language: "typescript", indent: "  " });
+    expect(output).toBe(expected);
+    expect(format(output, { language: "typescript", indent: "  " })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+    expect(format("class Plain{first(){}second(){}}\n", { language: "javascript", indent: "  " })).toBe(
+      "class Plain {\n  first() {}\n\n  second() {}\n}\n",
+    );
   });
 
   it("keeps documentation comments attached to the declarations they document", () => {

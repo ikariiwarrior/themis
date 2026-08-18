@@ -215,7 +215,7 @@ Build and install the development VSIX:
 ```sh
 npm run vscode:install
 npm run vscode:package
-code --install-extension editors/vscode/dist/themis-vscode-0.4.8.vsix
+code --install-extension editors/vscode/dist/themis-vscode-0.4.9.vsix
 ```
 
 Then add this to `.vscode/settings.json`:

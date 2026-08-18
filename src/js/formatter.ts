@@ -34,6 +34,11 @@ const FUNCTION_BODY_PARENTS = new Set([
   "ObjectMethod", "ClassMethod", "ClassPrivateMethod",
 ]);
 
+const CLASS_FIELD_MEMBER_TYPES = new Set([
+  "ClassProperty", "ClassPrivateProperty", "ClassAccessorProperty",
+  "TSAbstractPropertyDefinition", "TSIndexSignature", "EmptyStatement",
+]);
+
 function children(node: Node): Node[] {
   const result: Node[] = [];
   for (const [key, value] of Object.entries(node)) {
@@ -510,10 +515,24 @@ export class JavaScriptFormatter implements FormatterEngine {
             forceStructuralBreak(close);
           }
           for (let index = 1; index < body.length; index++) {
+            const previous = body[index - 1];
             const member = body[index];
             if (member.start == null) continue;
-            const memberToken = locate(tokens, member.start);
-            if (memberToken !== undefined && memberToken >= 0) forcedBreak.set(memberToken, 0);
+            const declarationToken = locate(tokens, member.start);
+            let memberToken = declarationToken;
+            if (node.type === "ClassBody" && previous.end != null) {
+              const leadingComments = Array.isArray(member.leadingComments) ? member.leadingComments as Node[] : [];
+              const leadingComment = leadingComments.find((comment) => comment.start != null
+                && comment.start >= previous.end!
+                && containsLineBreak(normalized.slice(previous.end!, comment.start)));
+              if (leadingComment?.start != null) memberToken = locate(tokens, leadingComment.start);
+            }
+            if (memberToken === undefined || memberToken < 0) continue;
+            const needsExecutableBoundary = node.type === "ClassBody"
+              && (!CLASS_FIELD_MEMBER_TYPES.has(previous.type) || !CLASS_FIELD_MEMBER_TYPES.has(member.type));
+            if (needsExecutableBoundary) forcedBlank.set(memberToken, 0);
+            else forceStructuralBreak(memberToken);
+            if (declarationToken !== undefined && declarationToken !== memberToken) forcedBreak.set(declarationToken, 0);
           }
         }
       }

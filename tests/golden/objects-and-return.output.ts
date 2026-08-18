@@ -8,10 +8,12 @@ send( {
     count: 2
 } );
 function compute( x ) {
+
     const doubled = x * 2;
 
     return doubled;
 }
 function identity( x ) {
+
     return x;
 }

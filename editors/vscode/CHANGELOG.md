@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.8 - 2026-08-18
+
+- Add one empty line after inline TypeScript and TSX function, method, and control-flow opening braces.
+- Exclude declaration containers, object literals, plain JavaScript, and next-line function braces from the new spacing rule.
+
 ## 0.4.7 - 2026-08-17
 
 - Keep trailing TypeScript comments compact while structurally indenting global namespaces, interfaces, and nested object-shaped types.

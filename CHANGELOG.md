@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.8 - 2026-08-18
+
+- Insert one empty line after an inline opening brace for TypeScript and TSX function, method, and control-flow bodies.
+- Keep declaration containers, object literals, plain JavaScript, and function braces authored on the next line outside the new spacing rule.
+- Keep inserted blank lines empty when TypeScript flow bodies appear in multiline Svelte expressions.
+
 ## 0.4.7 - 2026-08-17
 
 - Keep trailing TypeScript comments at a single authored space instead of padding them to the surrounding brace depth.

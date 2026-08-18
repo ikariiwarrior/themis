@@ -98,7 +98,7 @@ function structuralWhitespace(original: string, indent: string): string {
 }
 
 function indentContinuations(value: string, indent: string): string {
-  return value.replace(/\n/g, `\n${indent}`);
+  return value.split("\n").map((line, index) => index === 0 || line.length === 0 ? line : `${indent}${line}`).join("\n");
 }
 
 function openingTagEnd(source: string, node: Node, attributes: Node[]): number {

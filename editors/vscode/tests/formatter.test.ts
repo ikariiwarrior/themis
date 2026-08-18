@@ -39,7 +39,7 @@ describe("project integration", () => {
             useLocalVersion: false,
             workspaceTrusted: true,
         });
-        expect(formatted.output).toBe("if( ok ) {\n\trun();\n}\n");
+        expect(formatted.output).toBe("if( ok ) {\n\n\trun();\n}\n");
 
         const ignoredPath = join(sourceDirectory, "ignored.ts");
         await writeFile(ignoredPath, "const x=1;\n");

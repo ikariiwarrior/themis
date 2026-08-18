@@ -124,7 +124,7 @@ describe("multi-file CLI", () => {
     const root = await project();
     await writeFile(join(root, "themis.json"), JSON.stringify({ indent: { type: "tabs", size: 4 } }));
     await writeFile(join(root, "sample.ts"), "if(ok){run();}\n");
-    expect((await execute(root, ["sample.ts"])).stdout).toBe("if( ok ) {\n\trun();\n}\n");
+    expect((await execute(root, ["sample.ts"])).stdout).toBe("if( ok ) {\n\n\trun();\n}\n");
   });
 
   it("supports opinion.json as a compatibility alias", async () => {
@@ -143,7 +143,7 @@ describe("multi-file CLI", () => {
 
     const first = await execute(root, ["--write", "--cache", "src"]);
     expect(first.stdout).toBe("Formatted 2 files; 0 unchanged.\n");
-    expect(JSON.parse(await readFile(join(root, ".themis-cache"), "utf8"))).toMatchObject({ schema: 1, formatterVersion: "0.4.7" });
+    expect(JSON.parse(await readFile(join(root, ".themis-cache"), "utf8"))).toMatchObject({ schema: 1, formatterVersion: "0.4.8" });
 
     const second = await execute(root, ["--write", "--cache", "src"]);
     expect(second.stdout).toBe("Formatted 0 files; 0 unchanged; 2 cached.\n");
@@ -193,10 +193,10 @@ describe("multi-file CLI", () => {
 
     await eventually(async () => expect(stdout.text()).toContain("Watching"));
     await writeFile(sample, "if(ready){run();}\n");
-    await eventually(async () => expect(await readFile(sample, "utf8")).toBe("if( ready ) {\n    run();\n}\n"));
+    await eventually(async () => expect(await readFile(sample, "utf8")).toBe("if( ready ) {\n\n    run();\n}\n"));
 
     await writeFile(join(root, "themis.json"), JSON.stringify({ indent: { type: "tabs", size: 4 } }));
-    await eventually(async () => expect(await readFile(sample, "utf8")).toBe("if( ready ) {\n\trun();\n}\n"));
+    await eventually(async () => expect(await readFile(sample, "utf8")).toBe("if( ready ) {\n\n\trun();\n}\n"));
     controller.abort();
     expect(await watching).toBe(0);
     expect(stderr.text()).toBe("");

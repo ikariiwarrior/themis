@@ -329,7 +329,7 @@ describe("Svelte formatter", () => {
     expect(output).toContain("\n  import { beforeNavigate } from '$app/navigation';");
     expect(output).toContain("\n  /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/\n  / Component Imports\n  /~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/");
     expect(output).toContain("\n  let { children, data }: LayoutProps = $props();");
-    expect(output).toContain("\n  beforeNavigate( ( { willUnload } ) => {\n    if( willUnload ) {\n      void children;\n    }\n  } );");
+    expect(output).toContain("\n  beforeNavigate( ( { willUnload } ) => {\n\n    if( willUnload ) {\n\n      void children;\n    }\n  } );");
     expect(() => parse(output, { modern: true })).not.toThrow();
     expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
   });
@@ -361,6 +361,41 @@ describe("Svelte formatter", () => {
       "      }",
       "    }",
       "  }",
+    ].join("\n"));
+    expect(() => parse(output, { modern: true })).not.toThrow();
+    expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
+  });
+
+  it("opens inline TypeScript flow bodies with a blank line in scripts", () => {
+    const input = [
+      '<script lang="ts">',
+      "const resolve=():string=>{",
+      "const value='ready';",
+      "return value;",
+      "};",
+      "if(resolve()){",
+      "run();",
+      "}",
+      "const config={enabled:true};",
+      "</script>",
+      "",
+    ].join("\n");
+
+    const output = format(input, { language: "svelte", indent: "  " });
+    expect(output).toContain([
+      "  const resolve = (): string => {",
+      "",
+      "    const value = 'ready';",
+      "",
+      "    return value;",
+      "  };",
+      "  if( resolve() ) {",
+      "",
+      "    run();",
+      "  }",
+      "  const config = {",
+      "    enabled: true",
+      "  };",
     ].join("\n"));
     expect(() => parse(output, { modern: true })).not.toThrow();
     expect(format(output, { language: "svelte", indent: "  " })).toBe(output);

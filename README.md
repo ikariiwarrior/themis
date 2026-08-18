@@ -22,6 +22,7 @@ Implemented in this slice:
 - multiline class and interface bodies;
 - preservation of every explicit grouping parenthesis;
 - JavaScript/TypeScript block braces on the statement line;
+- one empty line after an inline opening brace for TypeScript/TSX function and control-flow bodies, without applying that spacing to object, class, interface, namespace, or type-literal containers;
 - multiline object literals by default;
 - compact versus multiline intent preservation for object literals passed directly as function arguments;
 - a soft, configurable line width (120 by default) that expands long calls and never collapses authored multiline constructs;
@@ -214,7 +215,7 @@ Build and install the development VSIX:
 ```sh
 npm run vscode:install
 npm run vscode:package
-code --install-extension editors/vscode/dist/themis-vscode-0.4.7.vsix
+code --install-extension editors/vscode/dist/themis-vscode-0.4.8.vsix
 ```
 
 Then add this to `.vscode/settings.json`:

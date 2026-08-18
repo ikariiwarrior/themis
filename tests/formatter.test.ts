@@ -90,9 +90,9 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(output).toBe("const valid = ( a && b ) || ( c && d );\n");
   });
 
-  it("does not add a blank line before a body containing only return", () => {
+  it("opens a body containing only return with exactly one blank line", () => {
     expect(format("function identity(x){return x;}\n", { language: "typescript" })).toBe(
-      "function identity( x ) {\n    return x;\n}\n",
+      "function identity( x ) {\n\n    return x;\n}\n",
     );
   });
 
@@ -345,6 +345,7 @@ describe("JavaScript/TypeScript formatter", () => {
       " * detail",
       " */",
       "const second = () => {",
+      "",
       "  return first;",
       "};",
       "",
@@ -447,6 +448,7 @@ describe("JavaScript/TypeScript formatter", () => {
     ].join("\n");
     const expected = [
       "function resolve( value: string ) {",
+      "",
       "    const normalized = value.trim();",
       "    log( normalized );",
       "",
@@ -458,6 +460,87 @@ describe("JavaScript/TypeScript formatter", () => {
     const output = format(input, { language: "typescript" });
     expect(output).toBe(expected);
     expect(format(output, { language: "typescript" })).toBe(output);
+  });
+
+  it("opens inline flow bodies with one blank line without spacing declaration containers", () => {
+    const input = [
+      "if(ready){",
+      "const retVal='asdf';",
+      "use(retVal);",
+      "}",
+      "const resolve=():string=>{",
+      "const retVal='asdf';",
+      "return retVal;",
+      "};",
+      "function nextLine()",
+      "{",
+      "work();",
+      "}",
+      "if(waiting)",
+      "{",
+      "pause();",
+      "}",
+      "const config={",
+      "enabled:true,",
+      "};",
+      "class Service{",
+      "value:string;",
+      "run(){",
+      "work();",
+      "}",
+      "}",
+      "interface Shape{",
+      "value:string;",
+      "}",
+      "type Result={",
+      "value:string;",
+      "};",
+      "",
+    ].join("\n");
+    const expected = [
+      "if( ready ) {",
+      "",
+      "    const retVal = 'asdf';",
+      "    use( retVal );",
+      "}",
+      "const resolve = (): string => {",
+      "",
+      "    const retVal = 'asdf';",
+      "",
+      "    return retVal;",
+      "};",
+      "function nextLine()",
+      "{",
+      "    work();",
+      "}",
+      "if( waiting ) {",
+      "",
+      "    pause();",
+      "}",
+      "const config = {",
+      "    enabled: true,",
+      "};",
+      "class Service {",
+      "    value: string;",
+      "    run() {",
+      "",
+      "        work();",
+      "    }",
+      "}",
+      "interface Shape {",
+      "    value: string;",
+      "}",
+      "type Result = {",
+      "    value: string;",
+      "};",
+      "",
+    ].join("\n");
+
+    const output = format(input, { language: "typescript" });
+    expect(output).toBe(expected);
+    expect(format(output, { language: "typescript" })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+    expect(format("if(ok){run();}\n", { language: "javascript" })).toBe("if( ok ) {\n    run();\n}\n");
   });
 
   it("keeps documentation comments attached to the declarations they document", () => {

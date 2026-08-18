@@ -29,6 +29,11 @@ const CONTROL_TYPES = new Set([
   "SwitchStatement", "TryStatement", "CatchClause", "WithStatement",
 ]);
 
+const FUNCTION_BODY_PARENTS = new Set([
+  "FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression",
+  "ObjectMethod", "ClassMethod", "ClassPrivateMethod",
+]);
+
 function children(node: Node): Node[] {
   const result: Node[] = [];
   for (const [key, value] of Object.entries(node)) {
@@ -465,7 +470,13 @@ export class JavaScriptFormatter implements FormatterEngine {
         if (open !== undefined && open >= 0 && close !== undefined && close >= 0) {
           blockBraces.set(open, close);
           if (close > open + 1) {
-            forceStructuralBreak(open + 1);
+            const inlineFlowBody = node.type === "BlockStatement"
+              && (options.language === "typescript" || options.language === "tsx")
+              && parent !== undefined
+              && (CONTROL_TYPES.has(parent.type) || FUNCTION_BODY_PARENTS.has(parent.type))
+              && (open === 0 || !containsLineBreak(gaps[open - 1] ?? ""));
+            if (inlineFlowBody) forcedBlank.set(open + 1, 0);
+            else forceStructuralBreak(open + 1);
             forceStructuralBreak(close);
           }
         }

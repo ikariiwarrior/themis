@@ -13,6 +13,7 @@
         }
     };
     function increment() {
+
         count += 1;
 
         return count;
@@ -38,6 +39,7 @@
 
 <Button
     onclick={( event ) => {
+
         event.preventDefault();
         increment()
     }}

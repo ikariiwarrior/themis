@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.7 - 2026-08-17
+
+- Keep trailing TypeScript comments compact while structurally indenting global namespaces, interfaces, and nested object-shaped types.
+- Preserve authored blank-line groups at TypeScript container boundaries and clean indentation-only blank lines.
+
 ## 0.4.6 - 2026-08-17
 
 - Fix indentation for declarations and object-shaped types nested in TypeScript global and namespace bodies.

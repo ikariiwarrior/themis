@@ -1,6 +1,6 @@
 {
     "name": "@ikarii_warrior/themis",
-    "version": "0.4.6",
+    "version": "0.4.7",
     "private": false,
     "publishConfig": {
         "access": "public"
@@ -32,7 +32,8 @@
         "ARCHITECTURE.md",
         "CHANGELOG.md",
         "LICENSE",
-        "assets",
+        "assets/themis-mark.png",
+        "assets/themis-mark.svg",
         "themis.example.json"
     ],
     "bin": {

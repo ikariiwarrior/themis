@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.7 - 2026-08-17
+
+- Keep trailing TypeScript comments at a single authored space instead of padding them to the surrounding brace depth.
+- Preserve authored blank lines at block, namespace, interface, class, and type-literal boundaries while normalizing their indentation.
+- Remove indentation-only whitespace from blank lines before standalone comments.
+
 ## 0.4.6 - 2026-08-17
 
 - Normalize declarations and comments nested in TypeScript `declare global` and `namespace` module bodies.

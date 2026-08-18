@@ -10,7 +10,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 async function golden(): Promise<[string, string]> {
   return Promise.all([
     readFile(join(here, "golden", "svelte.input.svelte"), "utf8"),
-    readFile(join(here, "golden", "svelte.output.svelte"), "utf8"),
+    readFile(join(here, "golden", "svelte.output.svelte"), "utf8").then((value) => value.replace(/\r\n?/g, "\n")),
   ]);
 }
 
@@ -330,6 +330,38 @@ describe("Svelte formatter", () => {
     expect(output).toContain("\n  /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/\n  / Component Imports\n  /~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/");
     expect(output).toContain("\n  let { children, data }: LayoutProps = $props();");
     expect(output).toContain("\n  beforeNavigate( ( { willUnload } ) => {\n    if( willUnload ) {\n      void children;\n    }\n  } );");
+    expect(() => parse(output, { modern: true })).not.toThrow();
+    expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
+  });
+
+  it("keeps trailing TypeScript comments compact in embedded scripts", () => {
+    const input = [
+      '<script lang="ts">',
+      "declare global {",
+      "namespace App {",
+      "interface Error {",
+      "errorId?: string; //custom shape",
+      "meta?: { route: string; }; //custom shape",
+      "}",
+      "}",
+      "}",
+      "</script>",
+      "",
+    ].join("\n");
+
+    const output = format(input, { language: "svelte", indent: "  " });
+    expect(output).toContain([
+      "  declare global {",
+      "    namespace App {",
+      "      interface Error {",
+      "        errorId?: string; //custom shape",
+      "        meta?: {",
+      "          route: string;",
+      "        }; //custom shape",
+      "      }",
+      "    }",
+      "  }",
+    ].join("\n"));
     expect(() => parse(output, { modern: true })).not.toThrow();
     expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
   });

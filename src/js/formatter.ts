@@ -167,6 +167,9 @@ export class JavaScriptFormatter implements FormatterEngine {
     const breakWasAuthoredBefore = (index: number): boolean => index > 0 && containsLineBreak(originalGaps[index - 1] ?? "");
     const blankWasAuthoredBefore = (currentToken: number): boolean =>
       currentToken > 0 && (originalGaps[currentToken - 1]?.match(/\n/g) ?? []).length > 1;
+    const forceStructuralBreak = (tokenIndex: number, extra = 0): void => {
+      (blankWasAuthoredBefore(tokenIndex) ? forcedBlank : forcedBreak).set(tokenIndex, extra);
+    };
     const isInterfaceDeclaration = (node: Node): boolean => node.type === "TSInterfaceDeclaration"
       || (node.type === "ExportNamedDeclaration" && (node.declaration as Node | undefined)?.type === "TSInterfaceDeclaration");
     const attachInterfaceSemicolon = (previous: Node, current: Node, currentToken: number): boolean => {
@@ -462,8 +465,8 @@ export class JavaScriptFormatter implements FormatterEngine {
         if (open !== undefined && open >= 0 && close !== undefined && close >= 0) {
           blockBraces.set(open, close);
           if (close > open + 1) {
-            forcedBreak.set(open + 1, 0);
-            forcedBreak.set(close, 0);
+            forceStructuralBreak(open + 1);
+            forceStructuralBreak(close);
           }
         }
 
@@ -492,8 +495,8 @@ export class JavaScriptFormatter implements FormatterEngine {
             ? node.body as Node[]
             : Array.isArray(node.members) ? node.members as Node[] : [];
           if (close > open + 1) {
-            forcedBreak.set(open + 1, 0);
-            forcedBreak.set(close, 0);
+            forceStructuralBreak(open + 1);
+            forceStructuralBreak(close);
           }
           for (let index = 1; index < body.length; index++) {
             const member = body[index];
@@ -743,10 +746,15 @@ export class JavaScriptFormatter implements FormatterEngine {
     let leadingTrivia = normalized.slice(0, tokens[0].start);
     const normalizeLineIndent = (value: string, indent: string): string => {
       if (/^[\t ]*$/.test(value)) return indent;
-      return containsLineBreak(value) ? value.replace(/[\t ]*$/, indent) : value;
+      return containsLineBreak(value)
+        ? value.replace(/[\t ]+(?=\n)/g, "").replace(/[\t ]*$/, indent)
+        : value;
     };
     for (let index = 0; index < tokens.length; index++) {
-      const indentableComment = isComment(tokens[index]) && (braceDepth[index] > 0 || delimiterDepth[index] === 0);
+      const commentStartsLine = index === 0 || breakWasAuthoredBefore(index)
+        || forcedBreak.has(index) || forcedBlank.has(index);
+      const indentableComment = isComment(tokens[index]) && commentStartsLine
+        && (braceDepth[index] > 0 || delimiterDepth[index] === 0);
       if (!programStatementTokens.has(index) && !indentableComment) continue;
       const depth = programStatementTokens.has(index) ? 0 : braceDepth[index] + arrayContinuationDepth(index);
       const indent = options.indent.repeat(depth);

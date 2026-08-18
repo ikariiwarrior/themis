@@ -9,7 +9,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 async function golden(): Promise<[string, string]> {
   return Promise.all([
     readFile(join(here, "golden", "json.input.json"), "utf8"),
-    readFile(join(here, "golden", "json.output.json"), "utf8"),
+    readFile(join(here, "golden", "json.output.json"), "utf8").then((value) => value.replace(/\r\n?/g, "\n")),
   ]);
 }
 

@@ -23,7 +23,7 @@ function validate(config: unknown, path: string): ThemisConfig {
   }
 
   const value = config as Record<string, unknown>;
-  const known = new Set(["lineWidth", "indent", "ignore"]);
+  const known = new Set(["lineWidth", "indent", "typescriptQuotePreference", "respectObjectFormatting", "ignore"]);
   const unknown = Object.keys(value).filter((key) => !known.has(key));
   if (unknown.length) throw new Error(`${path} contains unknown option${unknown.length === 1 ? "" : "s"}: ${unknown.join(", ")}.`);
 
@@ -48,6 +48,16 @@ function validate(config: unknown, path: string): ThemisConfig {
 
   if (value.ignore !== undefined && (!Array.isArray(value.ignore) || value.ignore.some((item) => typeof item !== "string"))) {
     throw new Error(`${path}: ignore must be an array of strings.`);
+  }
+
+  if (value.typescriptQuotePreference !== undefined
+    && value.typescriptQuotePreference !== "single"
+    && value.typescriptQuotePreference !== "double") {
+    throw new Error(`${path}: typescriptQuotePreference must be "single" or "double".`);
+  }
+
+  if (value.respectObjectFormatting !== undefined && typeof value.respectObjectFormatting !== "boolean") {
+    throw new Error(`${path}: respectObjectFormatting must be a boolean.`);
   }
 
   return value as ThemisConfig;
@@ -83,5 +93,7 @@ export function optionsFromConfig(config: ThemisConfig): Partial<FormatOptions> 
   return {
     lineWidth: config.lineWidth,
     indent: indentType === "tabs" ? "\t" : " ".repeat(indentSize),
+    typescriptQuotePreference: config.typescriptQuotePreference,
+    respectObjectFormatting: config.respectObjectFormatting,
   };
 }

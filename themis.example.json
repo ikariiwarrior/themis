@@ -4,6 +4,8 @@
     "type": "spaces",
     "size": 4
   },
+  "typescriptQuotePreference": "single",
+  "respectObjectFormatting": false,
   "ignore": [
     "generated/"
   ]

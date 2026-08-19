@@ -39,7 +39,7 @@ The first slice uses `@babel/parser` because it provides, in one small and matur
 
 - JavaScript, TypeScript, JSX, and TSX parsing;
 - source ranges and a complete original token stream;
-- comments and literal spellings;
+- comments and literal spellings, except for explicitly requested conservative JavaScript/TypeScript quote normalization;
 - explicit `ParenthesizedExpression` nodes when requested, making authored grouping observable;
 - broad current-syntax coverage without requiring a native compiler toolchain.
 
@@ -70,7 +70,7 @@ There is no runtime formatter dependency and no fallback to Prettier or Biome.
 The formatter performs five stages:
 
 1. Parse the whole source file into an AST plus tokens.
-2. Walk known AST nodes to annotate blocks, object literals, calls, arrays, continuations, JSX layout, statements, concluding returns, generics, and contextual TypeScript punctuation.
+2. Walk known AST nodes to annotate blocks, object literals, calls, arrays, continuations, JSX layout, statements, concluding returns, string-literal quote context, generics, and contextual TypeScript punctuation.
 3. Apply global typography rules to trivia between tokens, then apply AST-context overrides where a token such as `<`, `>`, `?`, or `:` has multiple grammatical meanings.
 4. Normalize layout-only JSX text nodes at multiline child boundaries while retaining text content and internal spacing.
 5. Reassemble original tokens with the selected trivia and one final newline.

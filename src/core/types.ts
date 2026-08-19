@@ -1,9 +1,12 @@
 export type LanguageId = "javascript" | "typescript" | "jsx" | "tsx" | "svelte" | "css" | "json";
+export type QuotePreference = "single" | "double";
 
 export interface FormatOptions {
   language: LanguageId;
   lineWidth: number;
   indent: string;
+  typescriptQuotePreference?: QuotePreference;
+  respectObjectFormatting: boolean;
 }
 
 export interface ThemisConfig {
@@ -12,6 +15,8 @@ export interface ThemisConfig {
     type?: "spaces" | "tabs";
     size?: number;
   };
+  typescriptQuotePreference?: QuotePreference;
+  respectObjectFormatting?: boolean;
   ignore?: string[];
 }
 

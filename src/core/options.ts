@@ -4,6 +4,7 @@ export const DEFAULT_OPTIONS: Readonly<FormatOptions> = {
   language: "typescript",
   lineWidth: 120,
   indent: "    ",
+  respectObjectFormatting: false,
 };
 
 export function resolveOptions(options: Partial<FormatOptions> = {}): FormatOptions {
@@ -11,6 +12,8 @@ export function resolveOptions(options: Partial<FormatOptions> = {}): FormatOpti
     language: options.language ?? DEFAULT_OPTIONS.language,
     lineWidth: options.lineWidth ?? DEFAULT_OPTIONS.lineWidth,
     indent: options.indent ?? DEFAULT_OPTIONS.indent,
+    typescriptQuotePreference: options.typescriptQuotePreference,
+    respectObjectFormatting: options.respectObjectFormatting ?? DEFAULT_OPTIONS.respectObjectFormatting,
   };
 }
 

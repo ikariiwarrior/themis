@@ -90,10 +90,127 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(output).toBe("const valid = ( a && b ) || ( c && d );\n");
   });
 
-  it("opens a body containing only return with exactly one blank line", () => {
+  it("does not insert a blank line when return is the only statement in a block", () => {
     expect(format("function identity(x){return x;}\n", { language: "typescript" })).toBe(
-      "function identity( x ) {\n\n    return x;\n}\n",
+      "function identity( x ) {\n    return x;\n}\n",
     );
+    expect(format("function check(){if(ok){return;}}\n", { language: "typescript" })).toContain(
+      "if( ok ) {\n        return;\n    }",
+    );
+  });
+
+  it("applies quote preferences conservatively and preserves JSX attribute literals", () => {
+    const input = [
+      'const converted="alpha";',
+      'const escaped="it\'s fine";',
+      'const mixed={left:\'one\',right:"two"};',
+      'export {converted} from "./module";',
+      'const view=<Widget label="Keep authored" value={"convert expression"}/>;',
+      "",
+    ].join("\n");
+    const options = {
+      language: "tsx" as const,
+      typescriptQuotePreference: "single" as const,
+      respectObjectFormatting: true,
+    };
+    const output = format(input, options);
+
+    expect(output).toContain("const converted = 'alpha';");
+    expect(output).toContain("const escaped = 'it\\'s fine';");
+    expect(output).toContain("const mixed = {left: 'one', right: \"two\"};");
+    expect(output).toContain("from './module';");
+    expect(output).toContain('label="Keep authored" value={\'convert expression\'}');
+    expect(format(output, options)).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript", "jsx"] })).not.toThrow();
+
+    expect(format("const value='alpha';\n", {
+      language: "typescript",
+      typescriptQuotePreference: "double",
+    })).toBe('const value = "alpha";\n');
+  });
+
+  it("respects compact object entries, alignment, and authored property groups when enabled", () => {
+    const input = [
+      "export const STATUS_OPTIONS = [",
+      '  { id: 1, name: "Active" },',
+      "",
+      '  { id: 2, name: "Inactive" }',
+      "] as const;",
+      "",
+      "export const LogLevelFlags = {",
+      "  DEBUG:     'debug',",
+      "  INFO:      'info',",
+      "  TELEMETRY: 'telemetry'",
+      "} as const;",
+      "",
+    ].join("\n");
+    const expected = [
+      "export const STATUS_OPTIONS = [",
+      '    { id: 1, name: "Active" },',
+      "",
+      '    { id: 2, name: "Inactive" }',
+      "] as const;",
+      "",
+      "export const LogLevelFlags = {",
+      "    DEBUG:     'debug',",
+      "    INFO:      'info',",
+      "    TELEMETRY: 'telemetry'",
+      "} as const;",
+      "",
+    ].join("\n");
+    const options = { language: "typescript" as const, respectObjectFormatting: true };
+    const output = format(input, options);
+
+    expect(output).toBe(expected);
+    expect(format(output, options)).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
+  it("separates documented object properties and preserves ordinary blank property groups", () => {
+    const input = [
+      "const formatter={",
+      "title:value=>value,",
+      "/** Converts the value. */",
+      "snake:value=>value,",
+      "",
+      "kebab:value=>value",
+      "};",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript" });
+
+    expect(output).toContain("title: value => value,\n\n    /** Converts the value. */\n    snake: value => value,");
+    expect(output).toContain("snake: value => value,\n\n    kebab: value => value");
+    expect(format(output, { language: "typescript" })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
+  it("indents nested multiline calls, arrays, objects, and callback blocks by ancestry", () => {
+    const input = [
+      "export const absbool=z.codec(",
+      "z.union( [",
+      "z.literal( 'yes' ),",
+      "z.literal( 'no' )",
+      "] ).optional(),",
+      "z.boolean().optional(),",
+      "{",
+      "decode:( value )=>{",
+      "if(value==='yes'){return ( true );}",
+      "return ( false );",
+      "},",
+      "encode:( bool )=>bool?'yes':'no'",
+      "}",
+      ");",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript" });
+
+    expect(output).toContain("z.codec(\n    z.union( [\n        z.literal( 'yes' ),\n        z.literal( 'no' )\n    ] ).optional(),");
+    expect(output).toContain("    {\n        decode: ( value ) => {\n\n            if( value === 'yes' ) {\n                return ( true );\n            }");
+    expect(output).toContain("\n            return ( false );\n        },\n        encode:");
+    expect(output.endsWith("\n    }\n);\n")).toBe(true);
+    expect(format(output, { language: "typescript" })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
   });
 
   it("spaces non-empty square brackets without changing empty brackets", () => {
@@ -345,7 +462,6 @@ describe("JavaScript/TypeScript formatter", () => {
       " * detail",
       " */",
       "const second = () => {",
-      "",
       "  return first;",
       "};",
       "",
@@ -572,7 +688,6 @@ describe("JavaScript/TypeScript formatter", () => {
       "  }",
       "",
       "  withContext( context: Types.LoggerContext ) {",
-      "",
       "    return new LoggerService( context );",
       "  }",
       "",

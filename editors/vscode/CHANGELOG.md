@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.10 - 2026-08-19
+
+- Add resource settings for TypeScript quote preference and authored object formatting, with project configuration taking precedence.
+- Bundle nested continuation, documented-property, and sole-return formatting fixes.
+
 ## 0.4.9 - 2026-08-18
 
 - Separate executable class members while keeping consecutive fields grouped.

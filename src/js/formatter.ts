@@ -70,6 +70,23 @@ function containsLineBreak(text: string): boolean {
   return /\r?\n/.test(text);
 }
 
+function requoteString(raw: string, preferred: "'" | '"'): string {
+  const current = raw[0];
+  if ((current !== "'" && current !== '"') || raw.at(-1) !== current || current === preferred) return raw;
+
+  let body = "";
+  for (let index = 1; index < raw.length - 1; index++) {
+    const character = raw[index];
+    if (character === "\\" && index + 1 < raw.length - 1) {
+      const escaped = raw[++index];
+      body += escaped === current ? escaped : `\\${escaped}`;
+    } else {
+      body += character === preferred ? `\\${character}` : character;
+    }
+  }
+  return `${preferred}${body}${preferred}`;
+}
+
 function locate(tokens: Token[], position: number, fromEnd = false): number | undefined {
   return tokens.findIndex((token) => (fromEnd ? token.end === position : token.start === position));
 }
@@ -162,7 +179,10 @@ export class JavaScriptFormatter implements FormatterEngine {
     const tokenOverrides = new Map<number, string>();
     const programStatementTokens = new Set<number>();
     const expandedArrays = new Set<number>();
+    const expandedCalls = new Set<number>();
     const arrayRanges: Array<{ open: number; close: number; elements: Node[] }> = [];
+    const stringLiteralTokens = new Set<number>();
+    const mixedQuoteVariableRanges: SourceRange[] = [];
     const callRanges: Array<{
       start: number;
       end: number;
@@ -197,11 +217,11 @@ export class JavaScriptFormatter implements FormatterEngine {
     ): void => {
       if (!expand || close <= open + 1) return;
       const firstItem = items[0]?.start != null ? locate(tokens, items[0].start) : undefined;
-      forcedBreak.set(firstItem ?? open + 1, itemExtra);
+      forceStructuralBreak(firstItem ?? open + 1, itemExtra);
       for (const item of items.slice(1)) {
         if (item.start == null) continue;
         const itemToken = locate(tokens, item.start);
-        if (itemToken !== undefined) forcedBreak.set(itemToken, itemExtra);
+        if (itemToken !== undefined) forceStructuralBreak(itemToken, itemExtra);
       }
       forcedBreak.set(close, 0);
     };
@@ -210,12 +230,12 @@ export class JavaScriptFormatter implements FormatterEngine {
       multilineObjects.add(open);
       forcedBreak.set(open + 1, 0);
       forcedBreak.set(close, 0);
-      for (const propertyToken of objectPropertyTokens.get(open) ?? []) forcedBreak.set(propertyToken, 0);
+      for (const propertyToken of objectPropertyTokens.get(open) ?? []) forceStructuralBreak(propertyToken);
       let nestedDepth = 0;
       for (let index = open + 1; index < close; index++) {
         if (["(", "[", "{", "${"].some((text) => tokenIs(index, text))) nestedDepth++;
         if ([")", "]", "}"].some((text) => tokenIs(index, text))) nestedDepth--;
-        if (tokenIs(index, ",") && nestedDepth === 0) forcedBreak.set(index + 1, 0);
+        if (tokenIs(index, ",") && nestedDepth === 0) forceStructuralBreak(index + 1);
       }
     };
 
@@ -247,9 +267,25 @@ export class JavaScriptFormatter implements FormatterEngine {
           const colon = findToken(tokens, key.end, value.start, ":", normalized);
           if (colon !== undefined) {
             compactBefore.add(colon);
-            spacedAfter.add(colon);
+            const authoredGap = gaps[colon] ?? "";
+            if (!options.respectObjectFormatting || !/^[\t ]{2,}$/.test(authoredGap)) spacedAfter.add(colon);
           }
         }
+      }
+
+      if (node.type === "StringLiteral" && node.start != null) {
+        const tokenIndex = locate(tokens, node.start);
+        if (tokenIndex !== undefined && parent?.type !== "JSXAttribute") stringLiteralTokens.add(tokenIndex);
+      }
+
+      if (node.type === "VariableDeclarator" && node.start != null && node.end != null) {
+        const quotes = new Set<string>();
+        walk(node, parent, (descendant) => {
+          if (descendant.type !== "StringLiteral" || descendant.start == null || descendant.end == null) return;
+          const raw = normalized.slice(descendant.start, descendant.end);
+          if (raw[0] === "'" || raw[0] === '"') quotes.add(raw[0]);
+        });
+        if (quotes.size > 1) mixedQuoteVariableRanges.push({ start: node.start, end: node.end });
       }
 
       if ((node.type === "ConditionalExpression" || node.type === "TSConditionalType") && node.start != null && node.end != null) {
@@ -470,6 +506,7 @@ export class JavaScriptFormatter implements FormatterEngine {
       }
 
       if ((node.type === "BlockStatement" || node.type === "TSModuleBlock") && node.start != null && node.end != null) {
+        const body = Array.isArray(node.body) ? node.body as Node[] : [];
         const open = locate(tokens, node.start);
         const close = findToken(tokens, node.start, node.end, "}", normalized, true);
         if (open !== undefined && open >= 0 && close !== undefined && close >= 0) {
@@ -480,13 +517,13 @@ export class JavaScriptFormatter implements FormatterEngine {
               && parent !== undefined
               && (CONTROL_TYPES.has(parent.type) || FUNCTION_BODY_PARENTS.has(parent.type))
               && (open === 0 || !containsLineBreak(gaps[open - 1] ?? ""));
-            if (inlineFlowBody) forcedBlank.set(open + 1, 0);
+            const soleReturn = body.length === 1 && body[0].type === "ReturnStatement";
+            if (inlineFlowBody && !soleReturn) forcedBlank.set(open + 1, 0);
             else forceStructuralBreak(open + 1);
             forceStructuralBreak(close);
           }
         }
 
-        const body = Array.isArray(node.body) ? node.body as Node[] : [];
         for (let index = 1; index < body.length; index++) {
           const previous = body[index - 1];
           const statement = body[index];
@@ -548,10 +585,26 @@ export class JavaScriptFormatter implements FormatterEngine {
           return tokenIndex === undefined || tokenIndex < 0 ? [] : [tokenIndex];
         }));
         const wasMultiline = containsLineBreak(normalized.slice(node.start, node.end));
-        if (!compactArgumentObjectTrees.has(node) && (!directArgumentObjects.has(node) || wasMultiline)) {
+        if (wasMultiline || (!options.respectObjectFormatting
+          && !compactArgumentObjectTrees.has(node)
+          && !directArgumentObjects.has(node))) {
           forceMultilineObject(open, close);
         } else if (compactArgumentObjectTrees.has(node)) {
           compactArgumentObjectRanges.push({ open, close });
+        }
+
+        for (let index = 1; index < properties.length; index++) {
+          const previous = properties[index - 1];
+          const property = properties[index];
+          if (previous.end == null || property.start == null) continue;
+          const commentToken = tokens.findIndex((token) => token.start >= previous.end!
+            && token.end <= property.start!
+            && isComment(token));
+          if (commentToken >= 0) {
+            forcedBlank.set(commentToken, 0);
+            const propertyToken = locate(tokens, property.start);
+            if (propertyToken !== undefined) forcedBreak.set(propertyToken, 0);
+          }
         }
       }
 
@@ -641,6 +694,15 @@ export class JavaScriptFormatter implements FormatterEngine {
     for (const { open, close } of compactArgumentObjectRanges.sort((left, right) => left.close - left.open - (right.close - right.open))) {
       const containsForcedBreak = [...forcedBreak.keys()].some((tokenIndex) => tokenIndex > open && tokenIndex < close);
       if (containsForcedBreak) forceMultilineObject(open, close);
+    }
+
+    if (options.typescriptQuotePreference) {
+      const preferred = options.typescriptQuotePreference === "single" ? "'" : '"';
+      for (const tokenIndex of stringLiteralTokens) {
+        const token = tokens[tokenIndex];
+        if (mixedQuoteVariableRanges.some((range) => range.start <= token.start && token.end <= range.end)) continue;
+        tokenOverrides.set(tokenIndex, requoteString(tokenText(tokenIndex), preferred));
+      }
     }
 
     // Expansion discovered inside an array must pressure its containing array
@@ -745,7 +807,10 @@ export class JavaScriptFormatter implements FormatterEngine {
         const argumentToken = locate(tokens, argument.start);
         return argumentToken !== undefined && breakWasAuthoredBefore(argumentToken);
       }) || breakWasAuthoredBefore(call.close);
-      formatMultilineDelimitedList(call.open, call.close, call.args, expand);
+      if (expand) {
+        expandedCalls.add(call.open);
+        formatMultilineDelimitedList(call.open, call.close, call.args, true, 0);
+      }
     }
 
     // Compute lexical brace depth for indentation introduced by this formatter.
@@ -768,6 +833,11 @@ export class JavaScriptFormatter implements FormatterEngine {
     const arrayContinuationDepth = (tokenIndex: number): number => arrayRanges.filter((range) =>
       expandedArrays.has(range.open) && range.open < tokenIndex && tokenIndex < range.close
     ).length;
+    const callContinuationDepth = (tokenIndex: number): number => callRanges.filter((range) =>
+      expandedCalls.has(range.open) && range.open < tokenIndex && tokenIndex < range.close
+    ).length;
+    const continuationDepth = (tokenIndex: number): number =>
+      arrayContinuationDepth(tokenIndex) + callContinuationDepth(tokenIndex);
 
     // Program statements and standalone comments use computed indentation
     // instead of padding inherited from the input. Comments nested in objects
@@ -786,7 +856,7 @@ export class JavaScriptFormatter implements FormatterEngine {
       const indentableComment = isComment(tokens[index]) && commentStartsLine
         && (braceDepth[index] > 0 || delimiterDepth[index] === 0);
       if (!programStatementTokens.has(index) && !indentableComment) continue;
-      const depth = programStatementTokens.has(index) ? 0 : braceDepth[index] + arrayContinuationDepth(index);
+      const depth = programStatementTokens.has(index) ? 0 : braceDepth[index] + continuationDepth(index);
       const indent = options.indent.repeat(depth);
       if (index === 0) leadingTrivia = normalizeLineIndent(leadingTrivia, indent);
       else gaps[index - 1] = normalizeLineIndent(gaps[index - 1], indent);
@@ -823,12 +893,12 @@ export class JavaScriptFormatter implements FormatterEngine {
 
     for (const [tokenIndex, extra] of forcedBreak) {
       if (tokenIndex <= 0) continue;
-      const indentDepth = Math.max(0, braceDepth[tokenIndex] + arrayContinuationDepth(tokenIndex) + extra);
+      const indentDepth = Math.max(0, braceDepth[tokenIndex] + continuationDepth(tokenIndex) + extra);
       gaps[tokenIndex - 1] = `\n${options.indent.repeat(indentDepth)}`;
     }
     for (const [tokenIndex, extra] of forcedBlank) {
       if (tokenIndex <= 0) continue;
-      const indentDepth = Math.max(0, braceDepth[tokenIndex] + arrayContinuationDepth(tokenIndex) + extra);
+      const indentDepth = Math.max(0, braceDepth[tokenIndex] + continuationDepth(tokenIndex) + extra);
       gaps[tokenIndex - 1] = `\n\n${options.indent.repeat(indentDepth)}`;
     }
 

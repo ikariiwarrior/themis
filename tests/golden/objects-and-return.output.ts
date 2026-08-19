@@ -14,6 +14,5 @@ function compute( x ) {
     return doubled;
 }
 function identity( x ) {
-
     return x;
 }

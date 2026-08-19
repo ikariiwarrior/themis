@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.10 - 2026-08-19
+
+- Add conservative single- or double-quote preferences for JavaScript, TypeScript, TSX, and embedded Svelte scripts, while preserving mixed-quote variables and literal JSX attributes.
+- Add opt-in preservation for compact object entries, aligned property values, and authored blank-line groups.
+- Correct nested multiline call/array/object indentation, separate documented object properties, and avoid a blank line above a sole `return`.
+
 ## 0.4.9 - 2026-08-18
 
 - Separate constructors, methods, accessors, and other executable class members with one empty line.

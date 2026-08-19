@@ -424,7 +424,6 @@ describe("Svelte formatter", () => {
       "    }",
       "",
       "    run() {",
-      "",
       "      return this.value;",
       "    }",
       "  }",
@@ -464,6 +463,26 @@ describe("Svelte formatter", () => {
   it("leaves explicitly unsupported script languages untouched", () => {
     const input = "<script lang=\"coffee\">const   x=1</script>\n<div>{x}</div>\n";
     expect(format(input, { language: "svelte" })).toBe(input);
+  });
+
+  it("passes quote and object-formatting preferences into embedded TypeScript", () => {
+    const input = [
+      '<script lang="ts">',
+      'const status={id:1,name:"Active"};',
+      "</script>",
+      "<p>{status.name}</p>",
+      "",
+    ].join("\n");
+    const options = {
+      language: "svelte" as const,
+      typescriptQuotePreference: "single" as const,
+      respectObjectFormatting: true,
+    };
+    const output = format(input, options);
+
+    expect(output).toContain("const status = {id: 1, name: 'Active'};");
+    expect(format(output, options)).toBe(output);
+    expect(() => parse(output, { modern: true })).not.toThrow();
   });
 
   it("formats explicit CSS and leaves other parseable style languages untouched", () => {

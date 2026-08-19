@@ -54,6 +54,37 @@ describe("project integration", () => {
         expect(ignored).toMatchObject({ output: "const x=1;\n", ignored: true });
     });
 
+    it("uses editor formatting preferences and lets themis.json override them", async () => {
+        const editorOnly = await formatForEditor({
+            source: 'const item={id:1,name:"Active"};\n',
+            languageId: "typescript",
+            useLocalVersion: false,
+            workspaceTrusted: true,
+            typescriptQuotePreference: "single",
+            respectObjectFormatting: true,
+        });
+        expect(editorOnly.output).toBe("const item = {id: 1, name: 'Active'};\n");
+
+        const root = await mkdtemp(join(tmpdir(), "themis-vscode-options-"));
+        const filePath = join(root, "sample.ts");
+        await writeFile(join(root, "themis.json"), JSON.stringify({
+            typescriptQuotePreference: "double",
+            respectObjectFormatting: true,
+        }));
+        await writeFile(filePath, "const item={id:1,name:'Active'};\n");
+        const configured = await formatForEditor({
+            source: "const item={id:1,name:'Active'};\n",
+            languageId: "typescript",
+            filePath,
+            workspaceRoot: root,
+            useLocalVersion: false,
+            workspaceTrusted: true,
+            typescriptQuotePreference: "single",
+            respectObjectFormatting: false,
+        });
+        expect(configured.output).toBe('const item = {id: 1, name: "Active"};\n');
+    });
+
     it("finds a project-local formatter without crossing the workspace boundary", async () => {
         const root = await mkdtemp(join(tmpdir(), "themis-local-"));
         const nested = join(root, "packages", "app", "src");

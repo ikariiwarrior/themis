@@ -23,11 +23,11 @@ Implemented in this slice:
 - preservation of every explicit grouping parenthesis;
 - JavaScript/TypeScript block braces on the statement line;
 - one empty line after an inline opening brace for TypeScript/TSX function and control-flow bodies, without applying that spacing to object, class, interface, namespace, or type-literal containers;
-- multiline object literals by default;
+- multiline object literals by default, with opt-in compact-entry and value-alignment preservation;
 - compact versus multiline intent preservation for object literals passed directly as function arguments;
 - a soft, configurable line width (120 by default) that expands long calls and never collapses authored multiline constructs;
-- a blank line before a concluding `return` only when earlier statements performed work;
-- preservation of token spelling, comments, literals, and syntax outside the implemented layout rules;
+- a blank line before a concluding `return` only when earlier statements performed work, never when it is the block's sole statement;
+- preservation of token spelling, comments, literals, and syntax outside the implemented layout rules, plus conservative opt-in quote normalization;
 - Svelte component parsing through the official compiler, with markup expressions plus module and instance scripts delegated to the JS/TS engine;
 - AST-aware Svelte attribute/directive layout and structural indentation for `if`, `each`, `await`, `key`, and `snippet` blocks;
 - syntax-aware CSS formatting for standalone `.css` files and ordinary Svelte `<style>` regions;
@@ -153,13 +153,15 @@ The CLI searches from the working directory toward the filesystem root for `them
     "type": "spaces",
     "size": 4
   },
+  "typescriptQuotePreference": "single",
+  "respectObjectFormatting": false,
   "ignore": [
     "generated/"
   ]
 }
 ```
 
-Configuration is validated strictly so misspelled options fail visibly. Tabs use one tab per indentation level; `indent.size` remains the preferred editor width in that mode.
+Configuration is validated strictly so misspelled options fail visibly. Tabs use one tab per indentation level; `indent.size` remains the preferred editor width in that mode. `typescriptQuotePreference` may be `"single"` or `"double"`; when omitted, authored quotes are preserved. A variable containing both quote styles is left unchanged rather than risking an ambiguous conversion. Enable `respectObjectFormatting` to retain authored compact object entries, aligned property values, and blank-line grouping.
 
 For stdin whose language cannot be inferred from a filename:
 
@@ -176,6 +178,8 @@ const output = format(source, {
   language: "typescript",
   lineWidth: 120,
   indent: "    ",
+  typescriptQuotePreference: "single",
+  respectObjectFormatting: true,
 });
 ```
 
@@ -215,7 +219,7 @@ Build and install the development VSIX:
 ```sh
 npm run vscode:install
 npm run vscode:package
-code --install-extension editors/vscode/dist/themis-vscode-0.4.9.vsix
+code --install-extension editors/vscode/dist/themis-vscode-0.4.10.vsix
 ```
 
 Then add this to `.vscode/settings.json`:

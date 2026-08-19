@@ -2,7 +2,7 @@
     "name": "themis-formatter",
     "displayName": "Themis Formatter",
     "description": "Format JavaScript, TypeScript, Svelte, CSS, and JSON with Themis.",
-    "version": "0.4.9",
+    "version": "0.4.10",
     "publisher": "ikarii",
     "license": "SEE LICENSE IN LICENSE",
     "pricing": "Free",
@@ -59,6 +59,23 @@
                     "default": "",
                     "scope": "resource",
                     "description": "Optional path to a Themis configuration file, relative to the workspace folder. Empty uses automatic themis.json discovery."
+                },
+                "themis.typescriptQuotePreference": {
+                    "type": "string",
+                    "enum": [
+                        "preserve",
+                        "single",
+                        "double"
+                    ],
+                    "default": "preserve",
+                    "scope": "resource",
+                    "description": "Preferred quote style for JavaScript and TypeScript strings. Mixed quote styles within one variable are preserved. A themis.json value takes precedence."
+                },
+                "themis.respectObjectFormatting": {
+                    "type": "boolean",
+                    "default": false,
+                    "scope": "resource",
+                    "description": "Preserve authored compact object entries and deliberate property-value alignment. A themis.json value takes precedence."
                 }
             }
         }

@@ -22,6 +22,8 @@ export interface EditorFormatRequest {
     configPath?: string;
     useLocalVersion: boolean;
     workspaceTrusted: boolean;
+    typescriptQuotePreference?: "single" | "double";
+    respectObjectFormatting?: boolean;
 }
 
 export interface EditorFormatResult {
@@ -118,7 +120,11 @@ export async function formatForEditor(request: EditorFormatRequest): Promise<Edi
     const language = languageFromVscode(request.languageId);
     if (!language) throw new Error(`Themis does not support the ${request.languageId} language.`);
 
-    let options: Partial<FormatOptions> = { language };
+    let options: Partial<FormatOptions> = {
+        language,
+        typescriptQuotePreference: request.typescriptQuotePreference,
+        respectObjectFormatting: request.respectObjectFormatting,
+    };
     if (request.filePath) {
         const configBase = request.workspaceRoot ?? dirname(request.filePath);
         const explicitConfig = request.configPath
@@ -129,7 +135,13 @@ export async function formatForEditor(request: EditorFormatRequest): Promise<Edi
         if (included.length === 0) {
             return { output: request.source, ignored: true, engine: "bundled" };
         }
-        options = { ...optionsFromConfig(loaded.config), language };
+        options = {
+            ...options,
+            ...optionsFromConfig(loaded.config),
+            typescriptQuotePreference: loaded.config.typescriptQuotePreference ?? options.typescriptQuotePreference,
+            respectObjectFormatting: loaded.config.respectObjectFormatting ?? options.respectObjectFormatting,
+            language,
+        };
     }
 
     if (request.useLocalVersion && request.workspaceTrusted && request.filePath && request.workspaceRoot) {

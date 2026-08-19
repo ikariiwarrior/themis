@@ -21,7 +21,7 @@ Add this to `.vscode/settings.json`:
 }
 ```
 
-The extension discovers `themis.json` and `.themisignore` exactly like the CLI. `themis.configPath` may select an explicit configuration file relative to the workspace folder.
+The extension discovers `themis.json` and `.themisignore` exactly like the CLI. `themis.configPath` may select an explicit configuration file relative to the workspace folder. `themis.typescriptQuotePreference` and `themis.respectObjectFormatting` provide resource-level defaults; explicit values in `themis.json` take precedence.
 
 Invalid syntax and invalid configuration are reported without changing the document. Ignored files are left untouched.
 
@@ -34,5 +34,5 @@ Build and install the VSIX from the repository root:
 ```sh
 npm run vscode:install
 npm run vscode:package
-code --install-extension editors/vscode/dist/themis-vscode-0.4.9.vsix
+code --install-extension editors/vscode/dist/themis-vscode-0.4.10.vsix
 ```

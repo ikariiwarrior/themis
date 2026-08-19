@@ -53,16 +53,34 @@ describe("project configuration", () => {
     const root = await project();
     const nested = join(root, "src", "feature");
     await mkdir(nested, { recursive: true });
-    await writeFile(join(root, "themis.json"), JSON.stringify({ lineWidth: 100, indent: { type: "tabs", size: 4 } }));
+    await writeFile(join(root, "themis.json"), JSON.stringify({
+      lineWidth: 100,
+      indent: { type: "tabs", size: 4 },
+      typescriptQuotePreference: "double",
+      respectObjectFormatting: true,
+    }));
     const loaded = await loadConfig(nested);
     expect(loaded.root).toBe(root);
-    expect(optionsFromConfig(loaded.config)).toMatchObject({ lineWidth: 100, indent: "\t" });
+    expect(optionsFromConfig(loaded.config)).toMatchObject({
+      lineWidth: 100,
+      indent: "\t",
+      typescriptQuotePreference: "double",
+      respectObjectFormatting: true,
+    });
   });
 
   it("rejects misspelled options instead of silently ignoring them", async () => {
     const root = await project();
     await writeFile(join(root, "themis.json"), JSON.stringify({ lineWidht: 100 }));
     await expect(loadConfig(root)).rejects.toThrow("unknown option: lineWidht");
+  });
+
+  it("rejects invalid quote and object-formatting preferences", async () => {
+    const root = await project();
+    await writeFile(join(root, "themis.json"), JSON.stringify({ typescriptQuotePreference: "smart" }));
+    await expect(loadConfig(root)).rejects.toThrow('must be "single" or "double"');
+    await writeFile(join(root, "themis.json"), JSON.stringify({ respectObjectFormatting: "yes" }));
+    await expect(loadConfig(root)).rejects.toThrow("must be a boolean");
   });
 });
 
@@ -143,7 +161,7 @@ describe("multi-file CLI", () => {
 
     const first = await execute(root, ["--write", "--cache", "src"]);
     expect(first.stdout).toBe("Formatted 2 files; 0 unchanged.\n");
-    expect(JSON.parse(await readFile(join(root, ".themis-cache"), "utf8"))).toMatchObject({ schema: 1, formatterVersion: "0.4.9" });
+    expect(JSON.parse(await readFile(join(root, ".themis-cache"), "utf8"))).toMatchObject({ schema: 1, formatterVersion: "0.4.10" });
 
     const second = await execute(root, ["--write", "--cache", "src"]);
     expect(second.stdout).toBe("Formatted 0 files; 0 unchanged; 2 cached.\n");

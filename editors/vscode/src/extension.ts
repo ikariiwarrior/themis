@@ -29,6 +29,10 @@ export function activate(context: vscode.ExtensionContext): void {
             const configuration = vscode.workspace.getConfiguration("themis", document.uri);
             const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
             const filePath = document.uri.scheme === "file" ? document.uri.fsPath : undefined;
+            const quotePreference = configuration.get<"preserve" | "single" | "double">(
+                "typescriptQuotePreference",
+                "preserve",
+            );
 
             try {
                 const result = await formatForEditor({
@@ -39,6 +43,8 @@ export function activate(context: vscode.ExtensionContext): void {
                     configPath: configuration.get<string>("configPath", "").trim() || undefined,
                     useLocalVersion: configuration.get<boolean>("useLocalVersion", true),
                     workspaceTrusted: vscode.workspace.isTrusted,
+                    typescriptQuotePreference: quotePreference === "preserve" ? undefined : quotePreference,
+                    respectObjectFormatting: configuration.get<boolean>("respectObjectFormatting", false),
                 });
 
                 if (result.ignored) {

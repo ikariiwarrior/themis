@@ -27,4 +27,4 @@ export function format(source: string, options: Partial<FormatOptions> = {}): st
   }
 }
 
-export type { FormatOptions, LanguageId, ThemisConfig } from "./core/types.js";
+export type { FormatOptions, LanguageId, QuotePreference, ThemisConfig } from "./core/types.js";

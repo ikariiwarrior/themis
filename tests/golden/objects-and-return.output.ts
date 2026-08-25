@@ -13,6 +13,4 @@ function compute( x ) {
 
     return doubled;
 }
-function identity( x ) {
-    return x;
-}
+function identity( x ) { return x; }

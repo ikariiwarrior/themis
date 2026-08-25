@@ -141,8 +141,8 @@ describe("multi-file CLI", () => {
   it("applies indentation from themis.json", async () => {
     const root = await project();
     await writeFile(join(root, "themis.json"), JSON.stringify({ indent: { type: "tabs", size: 4 } }));
-    await writeFile(join(root, "sample.ts"), "if(ok){run();}\n");
-    expect((await execute(root, ["sample.ts"])).stdout).toBe("if( ok ) {\n\n\trun();\n}\n");
+    await writeFile(join(root, "sample.ts"), "if(ok){run();more();}\n");
+    expect((await execute(root, ["sample.ts"])).stdout).toBe("if( ok ) {\n\n\trun();\n\tmore();\n}\n");
   });
 
   it("supports opinion.json as a compatibility alias", async () => {
@@ -161,7 +161,7 @@ describe("multi-file CLI", () => {
 
     const first = await execute(root, ["--write", "--cache", "src"]);
     expect(first.stdout).toBe("Formatted 2 files; 0 unchanged.\n");
-    expect(JSON.parse(await readFile(join(root, ".themis-cache"), "utf8"))).toMatchObject({ schema: 1, formatterVersion: "0.4.10" });
+    expect(JSON.parse(await readFile(join(root, ".themis-cache"), "utf8"))).toMatchObject({ schema: 1, formatterVersion: "0.4.11" });
 
     const second = await execute(root, ["--write", "--cache", "src"]);
     expect(second.stdout).toBe("Formatted 0 files; 0 unchanged; 2 cached.\n");
@@ -210,11 +210,11 @@ describe("multi-file CLI", () => {
     });
 
     await eventually(async () => expect(stdout.text()).toContain("Watching"));
-    await writeFile(sample, "if(ready){run();}\n");
-    await eventually(async () => expect(await readFile(sample, "utf8")).toBe("if( ready ) {\n\n    run();\n}\n"));
+    await writeFile(sample, "if(ready){run();more();}\n");
+    await eventually(async () => expect(await readFile(sample, "utf8")).toBe("if( ready ) {\n\n    run();\n    more();\n}\n"));
 
     await writeFile(join(root, "themis.json"), JSON.stringify({ indent: { type: "tabs", size: 4 } }));
-    await eventually(async () => expect(await readFile(sample, "utf8")).toBe("if( ready ) {\n\n\trun();\n}\n"));
+    await eventually(async () => expect(await readFile(sample, "utf8")).toBe("if( ready ) {\n\n\trun();\n\tmore();\n}\n"));
     controller.abort();
     expect(await watching).toBe(0);
     expect(stderr.text()).toBe("");

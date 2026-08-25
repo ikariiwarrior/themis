@@ -231,12 +231,6 @@ export class JavaScriptFormatter implements FormatterEngine {
       forcedBreak.set(open + 1, 0);
       forcedBreak.set(close, 0);
       for (const propertyToken of objectPropertyTokens.get(open) ?? []) forceStructuralBreak(propertyToken);
-      let nestedDepth = 0;
-      for (let index = open + 1; index < close; index++) {
-        if (["(", "[", "{", "${"].some((text) => tokenIs(index, text))) nestedDepth++;
-        if ([")", "]", "}"].some((text) => tokenIs(index, text))) nestedDepth--;
-        if (tokenIs(index, ",") && nestedDepth === 0) forceStructuralBreak(index + 1);
-      }
     };
 
     walk(ast, undefined, (node, parent) => {
@@ -512,15 +506,23 @@ export class JavaScriptFormatter implements FormatterEngine {
         if (open !== undefined && open >= 0 && close !== undefined && close >= 0) {
           blockBraces.set(open, close);
           if (close > open + 1) {
+            const compactSingleStatementBody = node.type === "BlockStatement"
+              && body.length === 1
+              && !containsLineBreak(normalized.slice(node.start, node.end));
             const inlineFlowBody = node.type === "BlockStatement"
               && (options.language === "typescript" || options.language === "tsx")
               && parent !== undefined
               && (CONTROL_TYPES.has(parent.type) || FUNCTION_BODY_PARENTS.has(parent.type))
               && (open === 0 || !containsLineBreak(gaps[open - 1] ?? ""));
             const soleReturn = body.length === 1 && body[0].type === "ReturnStatement";
-            if (inlineFlowBody && !soleReturn) forcedBlank.set(open + 1, 0);
-            else forceStructuralBreak(open + 1);
-            forceStructuralBreak(close);
+            if (compactSingleStatementBody) {
+              gaps[open] = " ";
+              gaps[close - 1] = " ";
+            } else {
+              if (inlineFlowBody && !soleReturn) forcedBlank.set(open + 1, 0);
+              else forceStructuralBreak(open + 1);
+              forceStructuralBreak(close);
+            }
           }
         }
 
@@ -738,6 +740,9 @@ export class JavaScriptFormatter implements FormatterEngine {
       }
 
       if (tokenIs(index, "{") && index > 0 && blockBraces.has(index) && !containsLineBreak(gaps[index - 1])) gaps[index - 1] = " ";
+
+      if (["else", "catch", "finally"].includes(text) && index > 0 && tokenIs(index - 1, "}")
+        && !containsLineBreak(gaps[index - 1])) gaps[index - 1] = " ";
     }
 
     // TypeScript generic delimiters are punctuation, not comparison operators.

@@ -418,14 +418,9 @@ describe("Svelte formatter", () => {
       "  class Service {",
       "    readonly value: string;",
       "",
-      "    constructor( value: string ) {",
+      "    constructor( value: string ) { this.value = value; }",
       "",
-      "      this.value = value;",
-      "    }",
-      "",
-      "    run() {",
-      "      return this.value;",
-      "    }",
+      "    run() { return this.value; }",
       "  }",
     ].join("\n"));
     expect(() => parse(output, { modern: true })).not.toThrow();

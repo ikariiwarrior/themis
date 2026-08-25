@@ -30,16 +30,16 @@ describe("project integration", () => {
         await writeFile(join(root, ".themisignore"), "src/ignored.ts\n");
 
         const filePath = join(sourceDirectory, "sample.ts");
-        await writeFile(filePath, "if(ok){run();}\n");
+        await writeFile(filePath, "if(ok){run();more();}\n");
         const formatted = await formatForEditor({
-            source: "if(ok){run();}\n",
+            source: "if(ok){run();more();}\n",
             languageId: "typescript",
             filePath,
             workspaceRoot: root,
             useLocalVersion: false,
             workspaceTrusted: true,
         });
-        expect(formatted.output).toBe("if( ok ) {\n\n\trun();\n}\n");
+        expect(formatted.output).toBe("if( ok ) {\n\n\trun();\n\tmore();\n}\n");
 
         const ignoredPath = join(sourceDirectory, "ignored.ts");
         await writeFile(ignoredPath, "const x=1;\n");

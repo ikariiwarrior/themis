@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.11 - 2026-08-25
+
+- Keep authored inline single-statement function, accessor, and control-flow bodies on one line while preserving authored multiline bodies.
+- Keep generic type arguments such as `Record<string, string>` together inside multiline object properties instead of treating their commas as property boundaries.
+- Normalize spacing where compact blocks meet `else`, `catch`, and `finally`, including in embedded Svelte scripts.
+
 ## 0.4.10 - 2026-08-19
 
 - Add conservative single- or double-quote preferences for JavaScript, TypeScript, TSX, and embedded Svelte scripts, while preserving mixed-quote variables and literal JSX attributes.

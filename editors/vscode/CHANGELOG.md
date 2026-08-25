@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.11 - 2026-08-25
+
+- Keep authored inline single-statement bodies and class accessors compact while preserving authored multiline bodies.
+- Bundle the generic type-comma boundary fix and compact block-clause spacing for JavaScript, TypeScript, TSX, and embedded Svelte scripts.
+
 ## 0.4.10 - 2026-08-19
 
 - Add resource settings for TypeScript quote preference and authored object formatting, with project configuration taking precedence.

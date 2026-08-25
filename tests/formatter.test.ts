@@ -90,13 +90,31 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(output).toBe("const valid = ( a && b ) || ( c && d );\n");
   });
 
-  it("does not insert a blank line when return is the only statement in a block", () => {
-    expect(format("function identity(x){return x;}\n", { language: "typescript" })).toBe(
-      "function identity( x ) {\n    return x;\n}\n",
-    );
-    expect(format("function check(){if(ok){return;}}\n", { language: "typescript" })).toContain(
-      "if( ok ) {\n        return;\n    }",
-    );
+  it("keeps authored inline single-statement bodies on one line", () => {
+    const input = [
+      "function check(){if(condition){return(blah);}}",
+      "async function load(){try{return(await blah());}finally{cleanup();}}",
+      "class Levels{#levels:string[]=[];public get levels(){return(this.#levels);}}",
+      "",
+    ].join("\n");
+    const expected = [
+      "function check() { if( condition ) { return( blah ); } }",
+      "async function load() { try { return( await blah() ); } finally { cleanup(); } }",
+      "class Levels {",
+      "    #levels: string[] = [];",
+      "",
+      "    public get levels() { return( this.#levels ); }",
+      "}",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript" });
+
+    expect(output).toBe(expected);
+    expect(format(output, { language: "typescript" })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+
+    const authoredMultiline = "function identity() {\n    return value;\n}\n";
+    expect(format(authoredMultiline, { language: "typescript" })).toBe(authoredMultiline);
   });
 
   it("applies quote preferences conservatively and preserves JSX attribute literals", () => {
@@ -206,7 +224,7 @@ describe("JavaScript/TypeScript formatter", () => {
     const output = format(input, { language: "typescript" });
 
     expect(output).toContain("z.codec(\n    z.union( [\n        z.literal( 'yes' ),\n        z.literal( 'no' )\n    ] ).optional(),");
-    expect(output).toContain("    {\n        decode: ( value ) => {\n\n            if( value === 'yes' ) {\n                return ( true );\n            }");
+    expect(output).toContain("    {\n        decode: ( value ) => {\n\n            if( value === 'yes' ) { return ( true ); }");
     expect(output).toContain("\n            return ( false );\n        },\n        encode:");
     expect(output.endsWith("\n    }\n);\n")).toBe(true);
     expect(format(output, { language: "typescript" })).toBe(output);
@@ -657,7 +675,7 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(output).toBe(expected);
     expect(format(output, { language: "typescript" })).toBe(output);
     expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
-    expect(format("if(ok){run();}\n", { language: "javascript" })).toBe("if( ok ) {\n    run();\n}\n");
+    expect(format("if(ok){run();}\n", { language: "javascript" })).toBe("if( ok ) { run(); }\n");
   });
 
   it("separates executable class members while keeping consecutive fields grouped", () => {
@@ -682,25 +700,14 @@ describe("JavaScript/TypeScript formatter", () => {
       "  readonly #context: Types.LoggerContext;",
       "  readonly #minimumLevel: Types.LogLevel;",
       "",
-      "  constructor( context: Types.LoggerContext = {} ) {",
+      "  constructor( context: Types.LoggerContext = {} ) { this.#context = context; }",
       "",
-      "    this.#context = context;",
-      "  }",
-      "",
-      "  withContext( context: Types.LoggerContext ) {",
-      "    return new LoggerService( context );",
-      "  }",
+      "  withContext( context: Types.LoggerContext ) { return new LoggerService( context ); }",
       "",
       "  /** Writes a debug entry. */",
-      "  debug( message: string ) {",
+      "  debug( message: string ) { this.write( message ); }",
       "",
-      "    this.write( message );",
-      "  }",
-      "",
-      "  private write( message: string ) {",
-      "",
-      "    console.debug( message );",
-      "  }",
+      "  private write( message: string ) { console.debug( message ); }",
       "}",
       "interface LoggerShape {",
       "  context: Types.LoggerContext;",
@@ -803,6 +810,23 @@ describe("JavaScript/TypeScript formatter", () => {
     const output = format(input, { language: "typescript", indent: "  " });
     expect(output).toBe(expected);
     expect(format(output, { language: "typescript", indent: "  " })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
+  it("does not treat generic type commas as multiline object property boundaries", () => {
+    const input = "const config={auth:{headers:(apiKey:string,token:string|undefined):Record<string,string>=>getAuthHeaders(apiKey,token),},};\n";
+    const expected = [
+      "const config = {",
+      "    auth: {",
+      "        headers: ( apiKey: string, token: string | undefined ): Record<string, string> => getAuthHeaders( apiKey, token ),",
+      "    },",
+      "};",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript" });
+
+    expect(output).toBe(expected);
+    expect(format(output, { language: "typescript" })).toBe(output);
     expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
   });
 

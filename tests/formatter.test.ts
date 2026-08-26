@@ -312,6 +312,30 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
   });
 
+  it("keeps same-line object property comments trailing", () => {
+    const input = [
+      "export const ApiErrorCode={",
+      "None                        :0x00000000, // 0",
+      "GeneralError                :0x000186A0, // 100000",
+      "InternalServerError         :0x000186A1, // 100001",
+      "}",
+      "",
+    ].join("\n");
+    const expected = [
+      "export const ApiErrorCode = {",
+      "  None: 0x00000000, // 0",
+      "  GeneralError: 0x000186A0, // 100000",
+      "  InternalServerError: 0x000186A1, // 100001",
+      "}",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript", indent: "  " });
+
+    expect(output).toBe(expected);
+    expect(format(output, { language: "typescript", indent: "  " })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
   it("keeps compact nested object trees compact inside direct call arguments", () => {
     const input = "commands.insertContent({type:this.name,attrs:{source}});\n";
     const output = format(input, { language: "typescript" });
@@ -424,6 +448,41 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(output).toContain("\n        console.error( `failed: ${payload.productId}` );\n    }");
     expect(output).toContain("\n\n    return ( null );\n} );");
     expect(format(output, { language: "typescript" })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
+  it("carries an authored call-chain continuation into its callback block", () => {
+    const input = [
+      "class Service{",
+      "#loggers:Logger[]=[];",
+      "run(entry:Entry){",
+      "this.#loggers.filter((logger)=>logger.boundary>=LogLevels.Telemetry)",
+      "  .map((logger)=>{",
+      "  logger.info(entry);",
+      "});",
+      "}",
+      "}",
+      "",
+    ].join("\n");
+    const expected = [
+      "class Service {",
+      "  #loggers: Logger[] = [];",
+      "",
+      "  run( entry: Entry ) {",
+      "",
+      "    this.#loggers.filter( ( logger ) => logger.boundary >= LogLevels.Telemetry )",
+      "      .map( ( logger ) => {",
+      "",
+      "        logger.info( entry );",
+      "      } );",
+      "  }",
+      "}",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript", indent: "  " });
+
+    expect(output).toBe(expected);
+    expect(format(output, { language: "typescript", indent: "  " })).toBe(output);
     expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
   });
 

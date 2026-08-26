@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.12 - 2026-08-26
+
+- Keep same-line object-property comments trailing and preserve leading-comment separation.
+- Carry authored chained-call indentation through callback bodies and closing braces, including in embedded Svelte scripts.
+
 ## 0.4.11 - 2026-08-25
 
 - Keep authored inline single-statement bodies and class accessors compact while preserving authored multiline bodies.

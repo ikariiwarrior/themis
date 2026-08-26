@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.12 - 2026-08-26
+
+- Keep same-line `//` comments trailing their object properties instead of reclassifying them as leading comments for the next property.
+- Carry authored member-chain continuation depth into callback bodies and their closing braces.
+- Apply both fixes consistently to JavaScript, TypeScript, TSX, and embedded Svelte scripts.
+
 ## 0.4.11 - 2026-08-25
 
 - Keep authored inline single-statement function, accessor, and control-flow bodies on one line while preserving authored multiline bodies.

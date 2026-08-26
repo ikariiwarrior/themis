@@ -191,6 +191,7 @@ export class JavaScriptFormatter implements FormatterEngine {
       args: Node[];
       authoredMultiline: boolean;
     }> = [];
+    const continuedCallRanges: Array<{ start: number; end: number }> = [];
 
     const tokenText = (index: number): string => normalized.slice(tokens[index].start, tokens[index].end);
     const tokenIs = (index: number, text: string): boolean => label(tokens[index], normalized) === text;
@@ -601,7 +602,8 @@ export class JavaScriptFormatter implements FormatterEngine {
           if (previous.end == null || property.start == null) continue;
           const commentToken = tokens.findIndex((token) => token.start >= previous.end!
             && token.end <= property.start!
-            && isComment(token));
+            && isComment(token)
+            && containsLineBreak(normalized.slice(previous.end!, token.start)));
           if (commentToken >= 0) {
             forcedBlank.set(commentToken, 0);
             const propertyToken = locate(tokens, property.start);
@@ -624,6 +626,16 @@ export class JavaScriptFormatter implements FormatterEngine {
             args: Array.isArray(node.arguments) ? node.arguments as Node[] : [],
             authoredMultiline: containsLineBreak(normalized.slice(node.start, node.end)),
           });
+          const property = callee?.property as Node | undefined;
+          if ((callee?.type === "MemberExpression" || callee?.type === "OptionalMemberExpression")
+            && property?.start != null) {
+            const propertyToken = locate(tokens, property.start);
+            const continuationToken = propertyToken === undefined ? undefined : propertyToken - 1;
+            if (continuationToken !== undefined && continuationToken >= 0
+              && breakWasAuthoredBefore(continuationToken)) {
+              continuedCallRanges.push({ start: continuationToken, end: close });
+            }
+          }
         }
       }
 
@@ -841,8 +853,11 @@ export class JavaScriptFormatter implements FormatterEngine {
     const callContinuationDepth = (tokenIndex: number): number => callRanges.filter((range) =>
       expandedCalls.has(range.open) && range.open < tokenIndex && tokenIndex < range.close
     ).length;
+    const chainContinuationDepth = (tokenIndex: number): number => continuedCallRanges.filter((range) =>
+      range.start < tokenIndex && tokenIndex < range.end
+    ).length;
     const continuationDepth = (tokenIndex: number): number =>
-      arrayContinuationDepth(tokenIndex) + callContinuationDepth(tokenIndex);
+      arrayContinuationDepth(tokenIndex) + callContinuationDepth(tokenIndex) + chainContinuationDepth(tokenIndex);
 
     // Program statements and standalone comments use computed indentation
     // instead of padding inherited from the input. Comments nested in objects

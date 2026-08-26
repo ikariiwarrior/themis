@@ -366,6 +366,40 @@ describe("Svelte formatter", () => {
     expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
   });
 
+  it("keeps trailing object comments and chained callback indentation in embedded scripts", () => {
+    const input = [
+      '<script lang="ts">',
+      "const codes={",
+      "none:0, // none",
+      "general:1, // general",
+      "};",
+      "const loggers=[console];",
+      "loggers.filter((logger)=>logger)",
+      "  .map((logger)=>{",
+      "  logger.info('ready');",
+      "});",
+      "</script>",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "svelte", indent: "  " });
+
+    expect(output).toContain([
+      "  const codes = {",
+      "    none: 0, // none",
+      "    general: 1, // general",
+      "  };",
+    ].join("\n"));
+    expect(output).toContain([
+      "  loggers.filter( ( logger ) => logger )",
+      "    .map( ( logger ) => {",
+      "",
+      "      logger.info( 'ready' );",
+      "    } );",
+    ].join("\n"));
+    expect(() => parse(output, { modern: true })).not.toThrow();
+    expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
+  });
+
   it("opens inline TypeScript flow bodies with a blank line in scripts", () => {
     const input = [
       '<script lang="ts">',

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.13 - 2026-09-02
+
+- Compact template interpolation delimiters while retaining distinct code-block brace layout.
+- Preserve deliberate object-property colon alignment through editor and project `respectObjectFormatting` settings.
+
 ## 0.4.12 - 2026-08-26
 
 - Keep same-line object-property comments trailing and preserve leading-comment separation.

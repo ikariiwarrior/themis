@@ -173,6 +173,7 @@ export class JavaScriptFormatter implements FormatterEngine {
     const compactArgumentObjectTrees = new Set<Node>();
     const compactArgumentObjectRanges: Array<{ open: number; close: number }> = [];
     const objectPropertyTokens = new Map<number, number[]>();
+    const preservedObjectColonAlignment = new Set<number>();
     const jsxElementRanges: SourceRange[] = [];
     const multilineParenthesizedRanges: SourceRange[] = [];
     const jsxDelimiterTokens = new Set<number>();
@@ -261,7 +262,7 @@ export class JavaScriptFormatter implements FormatterEngine {
         if (key?.end != null && value?.start != null) {
           const colon = findToken(tokens, key.end, value.start, ":", normalized);
           if (colon !== undefined) {
-            compactBefore.add(colon);
+            if (!preservedObjectColonAlignment.has(colon)) compactBefore.add(colon);
             const authoredGap = gaps[colon] ?? "";
             if (!options.respectObjectFormatting || !/^[\t ]{2,}$/.test(authoredGap)) spacedAfter.add(colon);
           }
@@ -368,6 +369,22 @@ export class JavaScriptFormatter implements FormatterEngine {
         const open = findToken(tokens, node.start, node.end, "<", normalized);
         const close = findToken(tokens, node.start, node.end, ">", normalized, true);
         if (open !== undefined && close !== undefined && close > open) genericAngles.push({ open, close });
+      }
+
+      if (node.type === "TemplateLiteral") {
+        const expressions = Array.isArray(node.expressions) ? node.expressions as Node[] : [];
+        const quasis = Array.isArray(node.quasis) ? node.quasis as Node[] : [];
+        for (let index = 0; index < expressions.length; index++) {
+          const expression = expressions[index];
+          const precedingQuasi = quasis[index];
+          const followingQuasi = quasis[index + 1];
+          if (expression.start == null || expression.end == null
+            || precedingQuasi?.end == null || followingQuasi?.start == null) continue;
+          const open = findToken(tokens, precedingQuasi.end, expression.start, "${", normalized);
+          const close = findToken(tokens, expression.end, followingQuasi.start, "}", normalized);
+          if (open !== undefined) compactAfter.add(open);
+          if (close !== undefined) compactBefore.add(close);
+        }
       }
 
       if ((node.type === "JSXExpressionContainer" || node.type === "JSXSpreadAttribute" || node.type === "JSXSpreadChild") && node.start != null && node.end != null) {
@@ -582,6 +599,18 @@ export class JavaScriptFormatter implements FormatterEngine {
         const close = locate(tokens, node.end, true);
         if (open === undefined || open < 0 || close === undefined || close < 0 || close <= open + 1) return;
         const properties = Array.isArray(node.properties) ? node.properties as Node[] : [];
+        const propertyColons = properties.flatMap((property) => {
+          if (property.type !== "ObjectProperty") return [];
+          const key = property.key as Node | undefined;
+          const value = property.value as Node | undefined;
+          if (key?.end == null || value?.start == null) return [];
+          const colon = findToken(tokens, key.end, value.start, ":", normalized);
+          return colon === undefined ? [] : [colon];
+        });
+        if (options.respectObjectFormatting
+          && propertyColons.some((colon) => /^[\t ]{2,}$/.test(gaps[colon - 1] ?? ""))) {
+          for (const colon of propertyColons) preservedObjectColonAlignment.add(colon);
+        }
         objectPropertyTokens.set(open, properties.flatMap((property) => {
           if (property.start == null) return [];
           const tokenIndex = locate(tokens, property.start);

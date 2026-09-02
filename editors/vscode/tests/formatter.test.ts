@@ -85,6 +85,34 @@ describe("project integration", () => {
         expect(configured.output).toBe('const item = {id: 1, name: "Active"};\n');
     });
 
+    it("preserves pre-colon object alignment from editor and project settings", async () => {
+        const source = "const codes={\nshort    :1,\nlongName :2,\n};\n";
+        const expected = "const codes = {\n    short    : 1,\n    longName : 2,\n};\n";
+        const editorOnly = await formatForEditor({
+            source,
+            languageId: "typescript",
+            useLocalVersion: false,
+            workspaceTrusted: true,
+            respectObjectFormatting: true,
+        });
+        expect(editorOnly.output).toBe(expected);
+
+        const root = await mkdtemp(join(tmpdir(), "themis-vscode-alignment-"));
+        const filePath = join(root, "sample.ts");
+        await writeFile(join(root, "themis.json"), JSON.stringify({ respectObjectFormatting: true }));
+        await writeFile(filePath, source);
+        const configured = await formatForEditor({
+            source,
+            languageId: "typescript",
+            filePath,
+            workspaceRoot: root,
+            useLocalVersion: false,
+            workspaceTrusted: true,
+            respectObjectFormatting: false,
+        });
+        expect(configured.output).toBe(expected);
+    });
+
     it("finds a project-local formatter without crossing the workspace boundary", async () => {
         const root = await mkdtemp(join(tmpdir(), "themis-local-"));
         const nested = join(root, "packages", "app", "src");

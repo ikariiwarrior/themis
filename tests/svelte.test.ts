@@ -370,8 +370,8 @@ describe("Svelte formatter", () => {
     const input = [
       '<script lang="ts">',
       "const codes={",
-      "none:0, // none",
-      "general:1, // general",
+      "none    :0, // none",
+      "general :1, // general",
       "};",
       "const loggers=[console];",
       "loggers.filter((logger)=>logger)",
@@ -381,12 +381,12 @@ describe("Svelte formatter", () => {
       "</script>",
       "",
     ].join("\n");
-    const output = format(input, { language: "svelte", indent: "  " });
+    const output = format(input, { language: "svelte", indent: "  ", respectObjectFormatting: true });
 
     expect(output).toContain([
       "  const codes = {",
-      "    none: 0, // none",
-      "    general: 1, // general",
+      "    none    : 0, // none",
+      "    general : 1, // general",
       "  };",
     ].join("\n"));
     expect(output).toContain([
@@ -397,7 +397,23 @@ describe("Svelte formatter", () => {
       "    } );",
     ].join("\n"));
     expect(() => parse(output, { modern: true })).not.toThrow();
+    expect(format(output, { language: "svelte", indent: "  ", respectObjectFormatting: true })).toBe(output);
+  });
+
+  it("compacts template interpolation delimiters in embedded TypeScript", () => {
+    const input = [
+      '<script lang="ts">',
+      "export type api_path = `${ Lowercase<api_topic> }/${Lowercase<string> }`;",
+      "const path=`${ value }`;",
+      "</script>",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "svelte", indent: "  " });
+
+    expect(output).toContain("  export type api_path = `${Lowercase<api_topic>}/${Lowercase<string>}`;");
+    expect(output).toContain("  const path = `${value}`;");
     expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
+    expect(() => parse(output, { modern: true })).not.toThrow();
   });
 
   it("opens inline TypeScript flow bodies with a blank line in scripts", () => {

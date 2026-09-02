@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.13 - 2026-09-02
+
+- Compact `${...}` template interpolation delimiters in runtime literals and TypeScript template literal types while keeping ordinary code-block brace layout distinct.
+- Preserve deliberate object-property colon alignment when `respectObjectFormatting` is enabled.
+- Apply both improvements consistently to JavaScript, TypeScript, TSX, embedded Svelte scripts, and VS Code settings.
+
 ## 0.4.12 - 2026-08-26
 
 - Keep same-line `//` comments trailing their object properties instead of reclassifying them as leading comments for the next property.

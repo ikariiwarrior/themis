@@ -160,6 +160,11 @@ describe("JavaScript/TypeScript formatter", () => {
       "  INFO:      'info',",
       "  TELEMETRY: 'telemetry'",
       "} as const;",
+      "export const ApiErrorCode = {",
+      "  None                : 0x00000000, // 0",
+      "  GeneralError        : 0x000186A0, // 100000",
+      "  InternalServerError : 0x000186A1, // 100001",
+      "};",
       "",
     ].join("\n");
     const expected = [
@@ -174,6 +179,11 @@ describe("JavaScript/TypeScript formatter", () => {
       "    INFO:      'info',",
       "    TELEMETRY: 'telemetry'",
       "} as const;",
+      "export const ApiErrorCode = {",
+      "    None                : 0x00000000, // 0",
+      "    GeneralError        : 0x000186A0, // 100000",
+      "    InternalServerError : 0x000186A1, // 100001",
+      "};",
       "",
     ].join("\n");
     const options = { language: "typescript" as const, respectObjectFormatting: true };
@@ -182,6 +192,10 @@ describe("JavaScript/TypeScript formatter", () => {
     expect(output).toBe(expected);
     expect(format(output, options)).toBe(output);
     expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+    expect(format("const codes={short   :1,longName :2};\n", {
+      language: "typescript",
+      respectObjectFormatting: false,
+    })).toBe("const codes = {\n    short: 1,\n    longName: 2\n};\n");
   });
 
   it("separates documented object properties and preserves ordinary blank property groups", () => {
@@ -498,6 +512,32 @@ describe("JavaScript/TypeScript formatter", () => {
 
     expect(output).toContain("return `('${sessionId}', '${ids[ role ]}', ${expiresAt})`;");
     expect(output).toContain("} ).join( ',\\n' )");
+    expect(format(output, { language: "typescript" })).toBe(output);
+    expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
+  });
+
+  it("compacts template interpolation delimiters without compacting code blocks", () => {
+    const input = [
+      "export type api_path = `${ Lowercase<api_topic> }/${Lowercase<string> }`;",
+      "function resolve(value:string){",
+      "const path=`${ value }`;",
+      "return path;",
+      "}",
+      "",
+    ].join("\n");
+    const expected = [
+      "export type api_path = `${Lowercase<api_topic>}/${Lowercase<string>}`;",
+      "function resolve( value: string ) {",
+      "",
+      "    const path = `${value}`;",
+      "",
+      "    return path;",
+      "}",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "typescript" });
+
+    expect(output).toBe(expected);
     expect(format(output, { language: "typescript" })).toBe(output);
     expect(() => parse(output, { sourceType: "unambiguous", plugins: ["typescript"] })).not.toThrow();
   });

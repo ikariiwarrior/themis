@@ -747,7 +747,6 @@ describe("JavaScript/TypeScript formatter", () => {
       "    work();",
       "}",
       "if( waiting ) {",
-      "",
       "    pause();",
       "}",
       "const config = {",

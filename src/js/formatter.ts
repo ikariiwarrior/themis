@@ -193,6 +193,7 @@ export class JavaScriptFormatter implements FormatterEngine {
       authoredMultiline: boolean;
     }> = [];
     const continuedCallRanges: Array<{ start: number; end: number }> = [];
+    const unbracedBodyRanges: Array<{ start: number; end: number }> = [];
 
     const tokenText = (index: number): string => normalized.slice(tokens[index].start, tokens[index].end);
     const tokenIs = (index: number, text: string): boolean => label(tokens[index], normalized) === text;
@@ -537,7 +538,8 @@ export class JavaScriptFormatter implements FormatterEngine {
               gaps[open] = " ";
               gaps[close - 1] = " ";
             } else {
-              if (inlineFlowBody && !soleReturn) forcedBlank.set(open + 1, 0);
+              const singleControlStatement = body.length === 1 && parent !== undefined && CONTROL_TYPES.has(parent.type);
+              if (inlineFlowBody && !soleReturn && !singleControlStatement) forcedBlank.set(open + 1, 0);
               else forceStructuralBreak(open + 1);
               forceStructuralBreak(close);
             }
@@ -555,7 +557,14 @@ export class JavaScriptFormatter implements FormatterEngine {
             && statement.type === "ReturnStatement"
             && index === body.length - 1;
           const preserveAuthoredBlank = blankWasAuthoredBefore(tokenIndex);
-          (isConcludingReturn || preserveAuthoredBlank ? forcedBlank : forcedBreak).set(tokenIndex, 0);
+          let boundaryToken = tokenIndex;
+          if (isConcludingReturn) {
+            while (boundaryToken > 0 && isComment(tokens[boundaryToken - 1])
+              && tokens[boundaryToken - 1].start >= (previous.end ?? 0)
+              && breakWasAuthoredBefore(boundaryToken - 1)) boundaryToken--;
+          }
+          if (isConcludingReturn) forcedBlank.set(boundaryToken, 0);
+          (preserveAuthoredBlank ? forcedBlank : forcedBreak).set(tokenIndex, 0);
         }
       }
 
@@ -706,6 +715,18 @@ export class JavaScriptFormatter implements FormatterEngine {
       }
 
       if (CONTROL_TYPES.has(node.type) && node.start != null && node.end != null) {
+        const bodies = node.type === "IfStatement"
+          ? [node.consequent, node.alternate] : [node.body];
+        for (const body of bodies as Array<Node | undefined>) {
+          if (body?.start == null || body.end == null || body.type === "BlockStatement"
+            || (body === node.alternate && body.type === "IfStatement")) continue;
+          const start = locate(tokens, body.start);
+          const end = locate(tokens, body.end, true);
+          if (start !== undefined && end !== undefined && breakWasAuthoredBefore(start)) {
+            unbracedBodyRanges.push({ start, end });
+            forceStructuralBreak(start);
+          }
+        }
         const block = children(node).find((child) => child.type === "BlockStatement");
         if (block?.start != null) {
           const brace = locate(tokens, block.start);
@@ -859,6 +880,16 @@ export class JavaScriptFormatter implements FormatterEngine {
       }
     }
 
+    // Normalize authored line starts throughout unbraced bodies, including
+    // nested else clauses; their indentation belongs to the enclosing body.
+    for (const { start, end } of unbracedBodyRanges) {
+      for (let index = start; index <= end; index++) {
+        if (breakWasAuthoredBefore(index) && !forcedBreak.has(index) && !forcedBlank.has(index)) {
+          forceStructuralBreak(index);
+        }
+      }
+    }
+
     // Compute lexical brace depth for indentation introduced by this formatter.
     const braceDepth: number[] = [];
     const delimiterDepth: number[] = [];
@@ -886,7 +917,8 @@ export class JavaScriptFormatter implements FormatterEngine {
       range.start < tokenIndex && tokenIndex < range.end
     ).length;
     const continuationDepth = (tokenIndex: number): number =>
-      arrayContinuationDepth(tokenIndex) + callContinuationDepth(tokenIndex) + chainContinuationDepth(tokenIndex);
+      arrayContinuationDepth(tokenIndex) + callContinuationDepth(tokenIndex) + chainContinuationDepth(tokenIndex)
+      + unbracedBodyRanges.filter((range) => range.start <= tokenIndex && tokenIndex <= range.end).length;
 
     // Program statements and standalone comments use computed indentation
     // instead of padding inherited from the input. Comments nested in objects

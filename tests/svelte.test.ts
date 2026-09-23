@@ -329,7 +329,7 @@ describe("Svelte formatter", () => {
     expect(output).toContain("\n  import { beforeNavigate } from '$app/navigation';");
     expect(output).toContain("\n  /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/\n  / Component Imports\n  /~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/");
     expect(output).toContain("\n  let { children, data }: LayoutProps = $props();");
-    expect(output).toContain("\n  beforeNavigate( ( { willUnload } ) => {\n\n    if( willUnload ) {\n\n      void children;\n    }\n  } );");
+    expect(output).toContain("\n  beforeNavigate( ( { willUnload } ) => {\n\n    if( willUnload ) {\n      void children;\n    }\n  } );");
     expect(() => parse(output, { modern: true })).not.toThrow();
     expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
   });
@@ -440,7 +440,6 @@ describe("Svelte formatter", () => {
       "    return value;",
       "  };",
       "  if( resolve() ) {",
-      "",
       "    run();",
       "  }",
       "  const config = {",

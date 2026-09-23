@@ -2,6 +2,13 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.14 - 2026-09-22
+
+- Carry unbraced control-flow indentation through multiline calls and nested branches.
+- Avoid automatic opening blank lines in single-statement control-flow blocks, including multiline statements.
+- Keep leading comments attached to concluding returns by placing automatic separation before the comments.
+- Cover JavaScript, TypeScript, and embedded Svelte scripts with syntax and idempotence regressions.
+
 ## 0.4.13 - 2026-09-02
 
 - Compact `${...}` template interpolation delimiters in runtime literals and TypeScript template literal types while keeping ordinary code-block brace layout distinct.

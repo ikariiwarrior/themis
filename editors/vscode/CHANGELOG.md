@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.14 - 2026-09-22
+
+- Correct multiline indentation inside unbraced control-flow bodies.
+- Avoid automatic opening blank lines in single-statement control-flow blocks.
+- Keep leading comments attached to concluding returns, including in embedded Svelte scripts.
+
 ## 0.4.13 - 2026-09-02
 
 - Compact template interpolation delimiters while retaining distinct code-block brace layout.

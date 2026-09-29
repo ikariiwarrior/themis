@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.16 - 2026-09-29
+
+- Correct spacing around methods named `as` and `satisfies` in TypeScript assertions, including embedded Svelte scripts.
+
 ## 0.4.15 - 2026-09-29
 
 - Correct spacing around keyword-named properties such as `validate.in` and `messages?.in`.

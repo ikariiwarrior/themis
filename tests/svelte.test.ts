@@ -15,6 +15,15 @@ async function golden(): Promise<[string, string]> {
 }
 
 describe("Svelte formatter", () => {
+  it("distinguishes assertion keywords from method names in TypeScript scripts", () => {
+    const input = '<script lang="ts">\nconst { value:_v,...rest }=field.as("select") as Record<string,unknown>;\nconst result=field.satisfies(rest) satisfies Result;\n</script>\n';
+    const expected = '<script lang="ts">\n  const { value: _v, ...rest } = field.as( "select" ) as Record<string, unknown>;\n  const result = field.satisfies( rest ) satisfies Result;\n</script>\n';
+    const output = format(input, { language: "svelte", indent: "  " });
+    expect(output).toBe(expected);
+    expect(() => parse(output, { modern: true })).not.toThrow();
+    expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
+  });
+
   it("preserves keyword members and aligns chained call closers in scripts", () => {
     const input = [
       '<script lang="ts">',

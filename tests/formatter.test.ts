@@ -22,6 +22,24 @@ async function jsxGolden(): Promise<[string, string]> {
 }
 
 describe("JavaScript/TypeScript formatter", () => {
+  it("spaces assertion keywords only between their expression and type", () => {
+    const cases = [
+      ["const { value:_v,...rest }=field. as ('select') as Record<string,unknown>;", "const { value: _v, ...rest } = field.as( 'select' ) as Record<string, unknown>;"],
+      ["const result=field?. as ('select') as Record<string,unknown>;", "const result = field?.as( 'select' ) as Record<string, unknown>;"],
+      ["const result=field.satisfies(value) satisfies Result;", "const result = field.satisfies( value ) satisfies Result;"],
+      ["const result=as(value) as unknown as Result;", "const result = as( value ) as unknown as Result;"],
+      ["const result=(field.as(value) as Input) satisfies Result;", "const result = ( field.as( value ) as Input ) satisfies Result;"],
+      ["const result=value as (Result);", "const result = value as ( Result );"],
+      ["const result=field.as(value);", "const result = field.as( value );"],
+    ];
+    for (const [input, expected] of cases) {
+      const output = format(input, { language: "typescript" });
+      expect(output).toBe(`${expected}\n`);
+      expect(() => parse(output, { sourceType: "module", plugins: ["typescript"] })).not.toThrow();
+      expect(format(output, { language: "typescript" })).toBe(output);
+    }
+  });
+
   it("distinguishes keyword property names from binary operators", () => {
     const input = [
       "const allowed=Array.isArray(validate?. in)&&!validate. in .includes(result);",

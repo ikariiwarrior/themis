@@ -2,6 +2,11 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.16 - 2026-09-29
+
+- Keep methods named `as` and `satisfies` distinct from TypeScript assertion keywords.
+- Locate assertion keywords between their expression and type, including nested assertions and embedded Svelte scripts.
+
 ## 0.4.15 - 2026-09-29
 
 - Keep keyword-named properties such as `in` and `instanceof` distinct from operators, and compact member-access dots.

@@ -311,7 +311,12 @@ export class JavaScriptFormatter implements FormatterEngine {
       }
 
       if ((node.type === "TSAsExpression" || node.type === "TSSatisfiesExpression") && node.start != null && node.end != null) {
-        const keyword = findToken(tokens, node.start, node.end, node.type === "TSAsExpression" ? "as" : "satisfies", normalized);
+        const expression = node.expression as Node;
+        const typeAnnotation = node.typeAnnotation as Node;
+        // Only the boundary owns the keyword; descendants can use the same name.
+        const keyword = expression.end != null && typeAnnotation.start != null
+          ? findToken(tokens, expression.end, typeAnnotation.start, node.type === "TSAsExpression" ? "as" : "satisfies", normalized)
+          : undefined;
         if (keyword !== undefined) {
           spacedBefore.add(keyword);
           spacedAfter.add(keyword);

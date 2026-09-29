@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.15 - 2026-09-29
+
+- Correct spacing around keyword-named properties such as `validate.in` and `messages?.in`.
+- Align multiline chained-call closing parentheses, including nested and optional chains in embedded Svelte scripts.
+
 ## 0.4.14 - 2026-09-22
 
 - Correct multiline indentation inside unbraced control-flow bodies.

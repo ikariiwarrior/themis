@@ -22,6 +22,57 @@ async function jsxGolden(): Promise<[string, string]> {
 }
 
 describe("JavaScript/TypeScript formatter", () => {
+  it("distinguishes keyword property names from binary operators", () => {
+    const input = [
+      "const allowed=Array.isArray(validate?. in)&&!validate. in .includes(result);",
+      "const message=messages?. in??`Must be one of: ${validate. in .join(', ')}`;",
+      "const matched=key in source&&value instanceof Type;",
+      "for(const key in source){source.in(key);}",
+      "const other=source.instanceof(value);",
+      "const computed=source[key in keys];",
+      "",
+    ].join("\n");
+    const expected = [
+      "const allowed = Array.isArray( validate?.in ) && !validate.in.includes( result );",
+      "const message = messages?.in ?? `Must be one of: ${validate.in.join( ', ' )}`;",
+      "const matched = key in source && value instanceof Type;",
+      "for( const key in source ) { source.in( key ); }",
+      "const other = source.instanceof( value );",
+      "const computed = source[ key in keys ];",
+      "",
+    ].join("\n");
+    for (const language of ["javascript", "typescript"] as const) {
+      const output = format(input, { language });
+      expect(output).toBe(expected);
+      expect(format(output, { language })).toBe(output);
+      expect(() => parse(output, { sourceType: "module" })).not.toThrow();
+    }
+  });
+
+  it("aligns multiline chained call closers with their opening line", () => {
+    const input = [
+      "export const address_query_options = z.object( {",
+      "  id: z.int().optional(),",
+      "  type: address_type_schema.optional(),",
+      "} )",
+      "  .partial()",
+      "  .refine(",
+      "    ( options ) => ( options.id ?? options.type ?? false ),",
+      "    { message: 'Get address requires either an id or type.' }",
+      ");",
+      "",
+    ].join("\n");
+    const expected = input.replace("\n);", "\n  );");
+    const nestedInput = `function build() {\n${input.replace("export ", "")}consume(\nvalue\n);\n}\n`;
+    const nestedExpected = `function build() {\n\n${expected.replace("export ", "").trimEnd().split("\n").map((line) => `  ${line}`).join("\n")}\n  consume(\n    value\n  );\n}\n`;
+    for (const [source, wanted] of [[input, expected], [nestedInput, nestedExpected]]) {
+      const output = format(source, { language: "typescript", indent: "  " });
+      expect(output).toBe(wanted);
+      expect(format(output, { language: "typescript", indent: "  " })).toBe(output);
+      expect(() => parse(output, { sourceType: "module", plugins: ["typescript"] })).not.toThrow();
+    }
+  });
+
   for (const name of ["acceptance", "objects-and-return"]) {
     it(`matches the ${name} golden file`, async () => {
       const [input, expected] = await golden(name);

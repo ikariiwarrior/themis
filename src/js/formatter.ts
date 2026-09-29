@@ -183,6 +183,7 @@ export class JavaScriptFormatter implements FormatterEngine {
     const expandedCalls = new Set<number>();
     const arrayRanges: Array<{ open: number; close: number; elements: Node[] }> = [];
     const stringLiteralTokens = new Set<number>();
+    const identifierTokens = new Set<number>();
     const mixedQuoteVariableRanges: SourceRange[] = [];
     const callRanges: Array<{
       start: number;
@@ -237,7 +238,11 @@ export class JavaScriptFormatter implements FormatterEngine {
     };
 
     walk(ast, undefined, (node, parent) => {
-      if ((node.type === "CallExpression" || node.type === "NewExpression") && Array.isArray(node.arguments)) {
+      if (node.type === "Identifier" && node.start != null) {
+        const tokenIndex = locate(tokens, node.start);
+        if (tokenIndex !== undefined && tokenIndex >= 0) identifierTokens.add(tokenIndex);
+      }
+      if ((node.type === "CallExpression" || node.type === "OptionalCallExpression" || node.type === "NewExpression") && Array.isArray(node.arguments)) {
         for (const argument of node.arguments as Node[]) {
           if (argument.type !== "ObjectExpression" || argument.start == null || argument.end == null) continue;
           directArgumentObjects.add(argument);
@@ -503,18 +508,18 @@ export class JavaScriptFormatter implements FormatterEngine {
       }
 
       if (node.start != null && node.end != null && (
-        node.type === "CallExpression" || node.type === "NewExpression" ||
+        node.type === "CallExpression" || node.type === "OptionalCallExpression" || node.type === "NewExpression" ||
         node.type === "FunctionDeclaration" || node.type === "FunctionExpression" ||
         node.type === "ObjectMethod" || node.type === "ClassMethod" || node.type === "ClassPrivateMethod" || node.type === "TSDeclareMethod" ||
         CONTROL_TYPES.has(node.type)
       )) {
         const callee = node.callee as Node | undefined;
-        const searchStart = (node.type === "CallExpression" || node.type === "NewExpression") && callee?.end != null ? callee.end : node.start;
+        const searchStart = (node.type === "CallExpression" || node.type === "OptionalCallExpression" || node.type === "NewExpression") && callee?.end != null ? callee.end : node.start;
         const open = findToken(tokens, searchStart, node.end, "(", normalized);
         if (open !== undefined) attachedParens.add(open);
       }
 
-      if ((parent?.type === "CallExpression" || parent?.type === "NewExpression") && Array.isArray(parent.arguments)) {
+      if ((parent?.type === "CallExpression" || parent?.type === "OptionalCallExpression" || parent?.type === "NewExpression") && Array.isArray(parent.arguments)) {
         if ((parent.arguments as unknown[]).includes(node) && node.type === "ObjectExpression") directArgumentObjects.add(node);
       }
 
@@ -650,7 +655,7 @@ export class JavaScriptFormatter implements FormatterEngine {
         }
       }
 
-      if ((node.type === "CallExpression" || node.type === "NewExpression") && node.start != null && node.end != null) {
+      if ((node.type === "CallExpression" || node.type === "OptionalCallExpression" || node.type === "NewExpression") && node.start != null && node.end != null) {
         const callee = node.callee as Node | undefined;
         const open = findToken(tokens, callee?.end ?? node.start, node.end, "(", normalized);
         const close = locate(tokens, node.end, true);
@@ -706,6 +711,14 @@ export class JavaScriptFormatter implements FormatterEngine {
 
       if ((node.type === "MemberExpression" || node.type === "OptionalMemberExpression") && node.property && typeof node.property === "object") {
         const property = node.property as Node;
+        const object = node.object as Node | undefined;
+        if (!node.computed && object?.end != null && property.start != null) {
+          const dot = findToken(tokens, object.end, property.start, node.optional ? "?." : ".", normalized);
+          if (dot !== undefined) {
+            compactBefore.add(dot);
+            compactAfter.add(dot);
+          }
+        }
         if (property.start != null) {
           const propertyToken = locate(tokens, property.start);
           if (propertyToken !== undefined && propertyToken > 0 && breakWasAuthoredBefore(propertyToken - 1)) {
@@ -796,7 +809,7 @@ export class JavaScriptFormatter implements FormatterEngine {
         if (index < gaps.length && !containsLineBreak(gaps[index])) gaps[index] = " ";
       }
 
-      if (!jsxDelimiterTokens.has(index) && label(token, normalized) !== "template" && (ASSIGNMENT_OPERATORS.has(text) || BINARY_OPERATORS.has(text))) {
+      if (!identifierTokens.has(index) && !jsxDelimiterTokens.has(index) && label(token, normalized) !== "template" && (ASSIGNMENT_OPERATORS.has(text) || BINARY_OPERATORS.has(text))) {
         if (index > 0 && !containsLineBreak(gaps[index - 1])) gaps[index - 1] = " ";
         if (index < gaps.length && !containsLineBreak(gaps[index])) gaps[index] = " ";
       }
@@ -914,7 +927,7 @@ export class JavaScriptFormatter implements FormatterEngine {
       expandedCalls.has(range.open) && range.open < tokenIndex && tokenIndex < range.close
     ).length;
     const chainContinuationDepth = (tokenIndex: number): number => continuedCallRanges.filter((range) =>
-      range.start < tokenIndex && tokenIndex < range.end
+      range.start < tokenIndex && tokenIndex <= range.end
     ).length;
     const continuationDepth = (tokenIndex: number): number =>
       arrayContinuationDepth(tokenIndex) + callContinuationDepth(tokenIndex) + chainContinuationDepth(tokenIndex)

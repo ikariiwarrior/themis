@@ -2,6 +2,12 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.15 - 2026-09-29
+
+- Keep keyword-named properties such as `in` and `instanceof` distinct from operators, and compact member-access dots.
+- Align multiline chained-call closing parentheses with their opening line, including nested and optional chains.
+- Cover JavaScript, TypeScript, and embedded Svelte scripts with syntax and idempotence regressions.
+
 ## 0.4.14 - 2026-09-22
 
 - Carry unbraced control-flow indentation through multiline calls and nested branches.

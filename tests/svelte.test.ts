@@ -15,6 +15,37 @@ async function golden(): Promise<[string, string]> {
 }
 
 describe("Svelte formatter", () => {
+  it("preserves keyword members and aligns chained call closers in scripts", () => {
+    const input = [
+      '<script lang="ts">',
+      'const source = { in: [1] };',
+      'const result = source?. in',
+      '  .filter(',
+      'value=>value in source',
+      ');',
+      '</script>',
+      '<p>{source.in.includes(1)} {result.length}</p>',
+      '',
+    ].join('\n');
+    const expected = [
+      '<script lang="ts">',
+      '  const source = {',
+      '    in: [ 1 ]',
+      '  };',
+      '  const result = source?.in',
+      '    .filter(',
+      '      value => value in source',
+      '    );',
+      '</script>',
+      '<p>{source.in.includes( 1 )} {result.length}</p>',
+      '',
+    ].join('\n');
+    const output = format(input, { language: "svelte", indent: "  " });
+    expect(output).toBe(expected);
+    expect(() => parse(output, { modern: true })).not.toThrow();
+    expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
+  });
+
   it("formats module, TypeScript, markup expressions, and CSS regions", async () => {
     const [input, expected] = await golden();
     const output = format(input, { language: "svelte" });

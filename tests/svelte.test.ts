@@ -109,6 +109,45 @@ describe("Svelte formatter", () => {
     expect(format(output, { language: "svelte" })).toBe(output);
   });
 
+  it("indents multiline render expressions relative to their markup depth", () => {
+    const input = [
+      "<section>",
+      "  {@render select_input(",
+      "  region,",
+      "  region_options,",
+      "  effective_region,",
+      "  region_select_change,",
+      "  region_input_change,",
+      "  '',",
+      "  'State / Region',",
+      "  'State',",
+      "  true",
+      ")}",
+      "</section>",
+      "",
+    ].join("\n");
+    const expected = [
+      "<section>",
+      "  {@render select_input(",
+      "    region,",
+      "    region_options,",
+      "    effective_region,",
+      "    region_select_change,",
+      "    region_input_change,",
+      "    '',",
+      "    'State / Region',",
+      "    'State',",
+      "    true",
+      "  )}",
+      "</section>",
+      "",
+    ].join("\n");
+    const output = format(input, { language: "svelte", indent: "  " });
+    expect(output).toBe(expected);
+    expect(() => parse(output, { modern: true })).not.toThrow();
+    expect(format(output, { language: "svelte", indent: "  " })).toBe(output);
+  });
+
   it("preserves authored multiline attributes and expands only under width pressure", () => {
     const input = '<Button class="first   second" onclick={()=>save(item)} disabled={!ready}>Save</Button>\n';
     const output = format(input, { language: "svelte", lineWidth: 50 });

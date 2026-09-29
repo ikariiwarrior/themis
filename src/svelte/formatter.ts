@@ -101,6 +101,15 @@ function indentContinuations(value: string, indent: string): string {
   return value.split("\n").map((line, index) => index === 0 || line.length === 0 ? line : `${indent}${line}`).join("\n");
 }
 
+function reindentExpression(value: string, sourceIndent: string, targetIndent: string, closingIndent: string): string {
+  const lines = value.split("\n");
+  return lines.map((line, index) => {
+    if (index === 0 || line.length === 0) return line;
+    const relative = line.trimStart();
+    return `${relative === ")" ? closingIndent : targetIndent}${relative}`;
+  }).join("\n");
+}
+
 function openingTagEnd(source: string, node: Node, attributes: Node[]): number {
   const lastAttribute = attributes[attributes.length - 1];
   const searchFrom = lastAttribute?.end ?? (node.start ?? 0) + 1;
@@ -456,6 +465,16 @@ export class SvelteFormatter implements FormatterEngine {
           const range: Node = { type: "DebugExpression", start: first.start, end: last.end };
           replace(first.start, last.end,
             formatExpression(normalized, range, this.scripts, options, markupLanguage), true);
+        }
+        return;
+      }
+
+      if (node.type === "RenderTag") {
+        const expression = isNode(node.expression) ? node.expression : undefined;
+        if (expression?.start !== undefined && expression.end !== undefined) {
+          const formatted = formatExpression(normalized, expression, this.scripts, options, markupLanguage);
+          replace(expression.start, expression.end,
+            reindentExpression(formatted, options.indent, lineIndent(depth + 1, options), lineIndent(depth, options)), true);
         }
         return;
       }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.17 - 2026-09-29
+
+- Correct indentation of multiline Svelte `{@render ...}` expressions.
+
 ## 0.4.16 - 2026-09-29
 
 - Correct spacing around methods named `as` and `satisfies` in TypeScript assertions, including embedded Svelte scripts.

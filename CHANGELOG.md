@@ -2,6 +2,11 @@
 
 All notable changes to Themis are recorded here.
 
+## 0.4.17 - 2026-09-29
+
+- Indent multiline Svelte `{@render ...}` expressions relative to their markup depth.
+- Align render-call closing delimiters with the surrounding markup.
+
 ## 0.4.16 - 2026-09-29
 
 - Keep methods named `as` and `satisfies` distinct from TypeScript assertion keywords.
